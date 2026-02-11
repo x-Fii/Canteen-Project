@@ -1,0 +1,19 @@
+// This is your Prisma schema file
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Table Model
+model MenuItem {
+  id           Int      @id @default(autoincrement())
+  name         String
+  price        Float
+  category     String   // Main Course, Dessert, Beverage, Snacks
+  canteenLevel String   // Level 1, Level 2, Level 3
+  createdAt    DateTime @default(now())
+}
