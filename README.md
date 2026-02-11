@@ -1,9 +1,3 @@
-To transition your project from PHP to a modern **Next.js + React** stack, you’ll be moving toward a "Full-Stack JavaScript" architecture. This setup is faster, more secure, and provides a much smoother user experience without page reloads.
-
-Here is the comprehensive **README** for your new project.
-
----
-
 # 🍴 Campus Canteen Menu System (Next.js Edition)
 
 A modern, responsive CRUD (Create, Read, Update, Delete) application for managing and displaying canteen menus across multiple levels.
@@ -125,5 +119,3 @@ npm run dev
 1. **Client vs Server:** In PHP, the server generates the HTML and sends it. In Next.js, the server sends the data (JSON), and React builds the HTML on the user's screen.
 2. **Routing:** Instead of `admin.php?edit=5`, Next.js uses clean folder-based routing and internal state management.
 3. **Security:** Prisma automatically protects you from **SQL Injection**, which was a manual concern in raw PHP/PDO.
-
-**Would you like me to provide the specific code for the `api/menu/route.ts` file to handle the database logic?**
