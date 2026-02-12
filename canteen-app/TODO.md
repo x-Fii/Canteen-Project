@@ -1,3 +1,0 @@
-- [x] Edit prisma/schema.prisma to add url = env("DATABASE_URL")
-- [x] Create .env.local with DATABASE_URL=file:./dev.db
-- [x] Verify and update prisma.config.ts if necessary

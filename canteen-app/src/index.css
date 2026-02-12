@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 30% 96%;
+    --foreground: 0 15% 12%;
+
+    --card: 45 40% 97%;
+    --card-foreground: 0 15% 12%;
+
+    --popover: 45 40% 97%;
+    --popover-foreground: 0 15% 12%;
+
+    --primary: 0 72% 46%;
+    --primary-foreground: 45 100% 94%;
+
+    --secondary: 40 50% 92%;
+    --secondary-foreground: 0 15% 12%;
+
+    --muted: 35 25% 91%;
+    --muted-foreground: 0 8% 42%;
+
+    --accent: 43 96% 50%;
+    --accent-foreground: 0 15% 12%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 35 30% 85%;
+    --input: 35 30% 85%;
+    --ring: 0 72% 46%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 0 72% 46%;
+    --sidebar-primary-foreground: 45 100% 94%;
+    --sidebar-accent: 40 50% 95%;
+    --sidebar-accent-foreground: 0 15% 12%;
+    --sidebar-border: 35 20% 88%;
+    --sidebar-ring: 0 72% 46%;
+
+    --category-main: 0 72% 46%;
+    --category-dessert: 340 65% 50%;
+    --category-beverage: 160 45% 38%;
+    --category-snacks: 43 96% 50%;
+
+    --gold: 43 96% 50%;
+    --gold-light: 43 90% 70%;
+    --crimson: 0 72% 46%;
+    --crimson-dark: 0 72% 32%;
+  }
+
+  .dark {
+    --background: 0 12% 7%;
+    --foreground: 40 30% 92%;
+    --card: 0 10% 11%;
+    --card-foreground: 40 30% 92%;
+    --popover: 0 10% 11%;
+    --popover-foreground: 40 30% 92%;
+    --primary: 0 72% 50%;
+    --primary-foreground: 45 100% 94%;
+    --secondary: 0 10% 16%;
+    --secondary-foreground: 40 30% 92%;
+    --muted: 0 8% 18%;
+    --muted-foreground: 40 15% 55%;
+    --accent: 43 90% 50%;
+    --accent-foreground: 0 15% 8%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 8% 18%;
+    --input: 0 8% 18%;
+    --ring: 0 72% 50%;
+    --sidebar-background: 0 10% 8%;
+    --sidebar-foreground: 40 20% 90%;
+    --sidebar-primary: 0 72% 50%;
+    --sidebar-primary-foreground: 45 100% 94%;
+    --sidebar-accent: 0 8% 14%;
+    --sidebar-accent-foreground: 40 20% 90%;
+    --sidebar-border: 0 8% 16%;
+    --sidebar-ring: 0 72% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer utilities {
+  .category-gradient-main {
+    background: linear-gradient(135deg, hsl(0 72% 46%), hsl(0 72% 32%));
+  }
+  .category-gradient-dessert {
+    background: linear-gradient(135deg, hsl(340 65% 50%), hsl(350 60% 38%));
+  }
+  .category-gradient-beverage {
+    background: linear-gradient(135deg, hsl(160 45% 38%), hsl(170 40% 28%));
+  }
+  .category-gradient-snacks {
+    background: linear-gradient(135deg, hsl(43 96% 50%), hsl(38 85% 40%));
+  }
+
+  .chinese-border {
+    border: 2px solid hsl(0 72% 46%);
+    box-shadow: inset 0 0 0 3px hsl(45 100% 94%), inset 0 0 0 5px hsl(0 72% 46%);
+  }
+
+  .gold-text {
+    background: linear-gradient(135deg, hsl(43 96% 50%), hsl(43 90% 70%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .lantern-shadow {
+    box-shadow: 0 8px 32px -8px hsl(0 72% 46% / 0.25), 0 2px 8px hsl(43 96% 50% / 0.1);
+  }
+}
