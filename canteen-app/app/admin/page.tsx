@@ -46,7 +46,7 @@ export default function AdminPage() {
 
       <div className="container mx-auto p-6">
         {/* Form Section */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+        <div className="bg-white rounded-lg text-black shadow-md p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4">{formData.id ? 'Edit Item' : 'Add New Item'}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input 
@@ -87,7 +87,7 @@ export default function AdminPage() {
         </div>
 
         {/* Table Section */}
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="bg-white text-black rounded-lg shadow-md overflow-hidden">
           <table className="min-w-full">
             <thead className="bg-gray-100">
               <tr>
