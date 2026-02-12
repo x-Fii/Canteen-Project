@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '../../lib/prisma';
 
 // 1. GET: Fetch items (Replaces your "SELECT * FROM menu_items")
 export async function GET(request: Request) {
