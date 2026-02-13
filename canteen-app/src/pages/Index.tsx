@@ -104,7 +104,7 @@ const Index = () => {
           </h3>
           <div className="flex items-center justify-center gap-3">
             <span className="h-px w-16 bg-accent/50" />
-            <span className="text-accent text-lg">龍</span>
+            <span className="text-accent text-lg">🍜</span>
             <span className="h-px w-16 bg-accent/50" />
           </div>
         </div>
