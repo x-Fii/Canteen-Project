@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Link, Navigate } from "react-router-dom";
-import { Pencil, Trash2, LogOut } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { useAuth } from "@/hooks/useAuth";
 
 const CATEGORIES = ["Main Course", "Dessert", "Beverage", "Snacks"];
 const LEVELS = ["Level 1", "Level 2", "Level 3"];
@@ -27,7 +26,6 @@ type MenuItem = {
 };
 
 const Admin = () => {
-  const { user, loading, isAdmin, signOut } = useAuth();
   const queryClient = useQueryClient();
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
   const [form, setForm] = useState({
@@ -49,7 +47,6 @@ const Admin = () => {
       if (error) throw error;
       return data as MenuItem[];
     },
-    enabled: isAdmin,
   });
 
   const saveMutation = useMutation({
@@ -126,32 +123,6 @@ const Admin = () => {
     saveMutation.mutate();
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
-
-  if (!user) return <Navigate to="/login" replace />;
-
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <span className="text-4xl">🔒</span>
-          <h1 className="font-display text-xl font-bold text-foreground mt-4">Access Denied · 无权限</h1>
-          <p className="text-muted-foreground mt-2 text-sm">You don't have admin privileges.</p>
-          <div className="mt-4 flex gap-3 justify-center">
-            <Link to="/" className="text-primary hover:underline text-sm">Back to Menu</Link>
-            <button onClick={signOut} className="text-destructive hover:underline text-sm">Sign Out</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background">
       {/* Nav */}
@@ -163,20 +134,12 @@ const Admin = () => {
               管理面板 · Admin Panel
             </h1>
           </div>
-          <div className="flex items-center gap-3">
-            <Link
-              to="/"
-              className="text-primary-foreground/70 hover:text-primary-foreground text-sm transition-colors border border-primary-foreground/30 px-3 py-1 rounded"
-            >
-              View Live Site
-            </Link>
-            <button
-              onClick={signOut}
-              className="text-primary-foreground/70 hover:text-primary-foreground text-sm transition-colors border border-primary-foreground/30 px-3 py-1 rounded flex items-center gap-1"
-            >
-              <LogOut className="h-3 w-3" /> Sign Out
-            </button>
-          </div>
+          <Link
+            to="/"
+            className="text-primary-foreground/70 hover:text-primary-foreground text-sm transition-colors border border-primary-foreground/30 px-3 py-1 rounded"
+          >
+            View Live Site
+          </Link>
         </div>
       </nav>
 
