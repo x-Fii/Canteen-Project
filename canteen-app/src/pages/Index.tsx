@@ -21,7 +21,14 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 };
 
 const Index = () => {
-  const [selectedLevel, setSelectedLevel] = useState("Level 1");
+  const [selectedLevel, setSelectedLevel] = useState(() => {
+    return localStorage.getItem("selectedLevel") || "Level 1";
+  });
+
+  const handleLevelChange = (lvl: string) => {
+    setSelectedLevel(lvl);
+    localStorage.setItem("selectedLevel", lvl);
+  };
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["menu_items", selectedLevel],
@@ -82,7 +89,7 @@ const Index = () => {
             {LEVELS.map((lvl) => (
               <button
                 key={lvl}
-                onClick={() => setSelectedLevel(lvl)}
+                onClick={() => handleLevelChange(lvl)}
                 className={`px-6 py-2.5 rounded text-sm font-semibold transition-all duration-300 border-2 ${
                   selectedLevel === lvl
                     ? "bg-primary text-primary-foreground border-primary lantern-shadow"
@@ -104,7 +111,7 @@ const Index = () => {
           </h3>
           <div className="flex items-center justify-center gap-3">
             <span className="h-px w-16 bg-accent/50" />
-            <span className="text-accent text-lg">🍜</span>
+            <span className="text-accent text-lg">龍</span>
             <span className="h-px w-16 bg-accent/50" />
           </div>
         </div>
