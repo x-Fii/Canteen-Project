@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { db, MENU_ITEMS_COLLECTION } from "@/lib/firebase";
+import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
 import { Link } from "react-router-dom";
 
 const LEVELS = ["Level 1", "Level 2", "Level 3"];
@@ -23,17 +24,35 @@ const CATEGORY_EMOJIS: Record<string, string> = {
 const Index = () => {
   const [selectedLevel, setSelectedLevel] = useState("Level 1");
 
-  const { data: items = [], isLoading } = useQuery({
+  const { data: items = [], isLoading } = useQuery<Array<{
+    id: string;
+    name: string;
+    price: number;
+    category: string;
+    canteen_level: string;
+    created_at: string;
+  }>>({
     queryKey: ["menu_items", selectedLevel],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("menu_items")
-        .select("*")
-        .eq("canteen_level", selectedLevel)
-        .order("category")
-        .order("name");
-      if (error) throw error;
-      return data;
+      const q = query(
+        collection(db, MENU_ITEMS_COLLECTION),
+        where("canteen_level", "==", selectedLevel),
+        orderBy("category"),
+        orderBy("name")
+      );
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Array<{
+        id: string;
+        name: string;
+        price: number;
+        category: string;
+        canteen_level: string;
+        created_at: string;
+      }>;
     },
   });
 

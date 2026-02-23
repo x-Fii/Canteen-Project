@@ -1,6 +1,17 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { db, MENU_ITEMS_COLLECTION } from "@/lib/firebase";
+import { 
+  collection, 
+  query, 
+  orderBy, 
+  onSnapshot, 
+  addDoc, 
+  updateDoc, 
+  doc, 
+  deleteDoc,
+  serverTimestamp 
+} from "firebase/firestore";
 import { Link } from "react-router-dom";
 import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,6 +38,9 @@ type MenuItem = {
 
 const Admin = () => {
   const queryClient = useQueryClient();
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
   const [form, setForm] = useState({
     name: "",
@@ -35,22 +49,41 @@ const Admin = () => {
     canteen_level: LEVELS[0],
   });
 
-  const { data: items = [], isLoading } = useQuery({
-    queryKey: ["admin_menu_items"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("menu_items")
-        .select("*")
-        .order("canteen_level")
-        .order("category")
-        .order("name");
-      if (error) throw error;
-      return data as MenuItem[];
-    },
-  });
+  const resetForm = () => {
+    setEditItem(null);
+    setForm({ name: "", price: "", category: CATEGORIES[0], canteen_level: LEVELS[0] });
+  };
 
-  const saveMutation = useMutation({
-    mutationFn: async () => {
+  // Use onSnapshot for real-time updates
+  useEffect(() => {
+    const q = query(
+      collection(db, MENU_ITEMS_COLLECTION),
+      orderBy("canteen_level"),
+      orderBy("category"),
+      orderBy("name")
+    );
+
+    const unsubscribe = onSnapshot(q, 
+      (snapshot) => {
+        const itemsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          created_at: doc.data().created_at?.toDate?.()?.toISOString() || new Date().toISOString()
+        })) as MenuItem[];
+        setItems(itemsData);
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching items:", error);
+        setIsLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleSave = async () => {
+    try {
       const parsed = menuItemSchema.parse({
         name: form.name,
         price: parseFloat(form.price),
@@ -58,53 +91,53 @@ const Admin = () => {
         canteen_level: form.canteen_level,
       });
 
+      setIsSaving(true);
+
       const payload = {
         name: parsed.name,
         price: parsed.price,
         category: parsed.category,
         canteen_level: parsed.canteen_level,
+        created_at: serverTimestamp(),
       };
 
       if (editItem) {
-        const { error } = await supabase
-          .from("menu_items")
-          .update(payload)
-          .eq("id", editItem.id);
-        if (error) throw error;
+        const itemRef = doc(db, MENU_ITEMS_COLLECTION, editItem.id);
+        await updateDoc(itemRef, payload);
+        toast.success("Item updated!");
       } else {
-        const { error } = await supabase.from("menu_items").insert([payload]);
-        if (error) throw error;
+        await addDoc(collection(db, MENU_ITEMS_COLLECTION), payload);
+        toast.success("Item added!");
       }
-    },
-    onSuccess: () => {
-      toast.success(editItem ? "Item updated!" : "Item added!");
-      queryClient.invalidateQueries({ queryKey: ["admin_menu_items"] });
+      
+      // Invalidate the menu items query for Index page
+      queryClient.invalidateQueries({ queryKey: ["menu_items"] });
       resetForm();
-    },
-    onError: (err) => {
+    } catch (err) {
       if (err instanceof z.ZodError) {
         toast.error(err.errors[0].message);
       } else {
         toast.error("Failed to save item");
       }
-    },
-  });
+      // Invalidate queries on error to ensure fresh data
+      queryClient.invalidateQueries({ queryKey: ["menu_items"] });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("menu_items").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
+  const handleDelete = async (id: string) => {
+    try {
+      const itemRef = doc(db, MENU_ITEMS_COLLECTION, id);
+      await deleteDoc(itemRef);
       toast.success("Item deleted!");
-      queryClient.invalidateQueries({ queryKey: ["admin_menu_items"] });
-    },
-    onError: () => toast.error("Failed to delete item"),
-  });
-
-  const resetForm = () => {
-    setEditItem(null);
-    setForm({ name: "", price: "", category: CATEGORIES[0], canteen_level: LEVELS[0] });
+      queryClient.invalidateQueries({ queryKey: ["menu_items"] });
+    } catch (err) {
+      console.error("Delete error:", err);
+      toast.error("Failed to delete item");
+      // Invalidate queries to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ["menu_items"] });
+    }
   };
 
   const startEdit = (item: MenuItem) => {
@@ -120,7 +153,7 @@ const Admin = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    saveMutation.mutate();
+    handleSave();
   };
 
   return (
@@ -151,10 +184,11 @@ const Admin = () => {
           </h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">
+              <label htmlFor="food-name" className="block text-sm font-medium text-muted-foreground mb-1">
                 Food Name · 菜名
               </label>
               <input
+                id="food-name"
                 type="text"
                 required
                 maxLength={100}
@@ -164,10 +198,11 @@ const Admin = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">
+              <label htmlFor="food-price" className="block text-sm font-medium text-muted-foreground mb-1">
                 Price (RM) · 价格
               </label>
               <input
+                id="food-price"
                 type="number"
                 step="0.01"
                 min="0"
@@ -178,10 +213,11 @@ const Admin = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">
+              <label htmlFor="food-category" className="block text-sm font-medium text-muted-foreground mb-1">
                 Category · 类别
               </label>
               <select
+                id="food-category"
                 value={form.category}
                 onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -192,10 +228,11 @@ const Admin = () => {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-muted-foreground mb-1">
+              <label htmlFor="canteen-level" className="block text-sm font-medium text-muted-foreground mb-1">
                 Canteen Level · 楼层
               </label>
               <select
+                id="canteen-level"
                 value={form.canteen_level}
                 onChange={(e) => setForm((f) => ({ ...f, canteen_level: e.target.value }))}
                 className="w-full rounded-lg border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -208,10 +245,10 @@ const Admin = () => {
             <div className="md:col-span-2 flex gap-2">
               <button
                 type="submit"
-                disabled={saveMutation.isPending}
+                disabled={isSaving}
                 className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 px-5 rounded-lg transition-colors disabled:opacity-50"
               >
-                {saveMutation.isPending ? "Saving..." : editItem ? "Update Item" : "Add Item"}
+                {isSaving ? "Saving..." : editItem ? "Update Item" : "Add Item"}
               </button>
               {editItem && (
                 <button
@@ -280,7 +317,7 @@ const Admin = () => {
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm("Are you sure?")) deleteMutation.mutate(item.id);
+                              if (confirm("Are you sure?")) handleDelete(item.id);
                             }}
                             className="text-destructive hover:text-destructive/70 transition-colors"
                             aria-label="Delete"
