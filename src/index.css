@@ -127,3 +127,56 @@
     box-shadow: 0 8px 32px -8px hsl(0 72% 46% / 0.25), 0 2px 8px hsl(43 96% 50% / 0.1);
   }
 }
+
+/* TV Mode Styles */
+.tv-mode {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.tv-mode::-webkit-scrollbar {
+  display: none;
+}
+
+.tv-mode {
+  cursor: none;
+}
+
+.tv-mode button:hover,
+.tv-mode a:hover {
+  transform: none !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
+
+@keyframes tv-scroll {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
+.tv-mode .auto-scroll {
+  animation: tv-scroll 60s linear infinite;
+}
+
+.tv-mode .auto-scroll:hover {
+  animation-play-state: paused;
+}
+
+.tv-mode .text-2xl { font-size: 2.5rem !important; }
+.tv-mode .text-3xl { font-size: 4rem !important; }
+.tv-mode .text-lg { font-size: 1.5rem !important; }
+.tv-mode .text-sm { font-size: 1.125rem !important; }
+.tv-mode .text-xs { font-size: 1rem !important; }
+
+.tv-mode h1, .tv-mode h2, .tv-mode h3, .tv-mode h4 {
+  font-weight: 700 !important;
+  letter-spacing: 0.05em !important;
+}
+
+@media (min-width: 1920px) {
+  .tv-mode .container { max-width: 1800px !important; }
+  .tv-mode .grid { grid-template-columns: repeat(2, 1fr) !important; }
+}
+
+.tv-mode .bg-background { background-color: hsl(0 0% 100%) !important; }
+.tv-mode .text-foreground { color: hsl(0 0% 10%) !important; }

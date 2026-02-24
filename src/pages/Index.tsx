@@ -1,13 +1,11 @@
-import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useMemo, useEffect } from "react";
 import { db, MENU_ITEMS_COLLECTION } from "@/lib/firebase";
-import { collection, query, where, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { Link } from "react-router-dom";
 
 const LEVELS = ["Level 1", "Level 2", "Level 3"];
 const CATEGORIES = ["Main Course", "Dessert", "Beverage", "Snacks"];
 
-// Define MenuItem interface for better type safety
 interface MenuItem {
   id: string;
   name: string;
@@ -31,38 +29,77 @@ const CATEGORY_EMOJIS: Record<string, string> = {
   Snacks: "🥟",
 };
 
-const Index = () => {
-  const [selectedLevel, setSelectedLevel] = useState("Level 1");
+const isTVMode = () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('view') === 'tv';
+};
 
-  const { data: items = [], isLoading, isError, error } = useQuery<MenuItem[]>({
-    queryKey: ["menu_items", selectedLevel],
-    queryFn: async () => {
-      // Fetch all items and filter client-side to avoid index requirement
-      const q = query(
-        collection(db, MENU_ITEMS_COLLECTION),
-        where("canteen_level", "==", selectedLevel)
-      );
-      
-      const snapshot = await getDocs(q);
-      // Sort client-side to avoid composite index requirement
-      const items = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as MenuItem[];
-      
-      // Sort by category then by name
-      return items.sort((a, b) => {
-        if (a.category !== b.category) {
-          return a.category.localeCompare(b.category);
-        }
-        return a.name.localeCompare(b.name);
-      });
-    },
-    // Cache data for 5 minutes to prevent unnecessary refetches
-    staleTime: 5 * 60 * 1000,
-    // Keep showing old data while fetching new data for smoother UX
-    placeholderData: (previousData) => previousData,
+const Index = () => {
+  const [selectedLevel, setSelectedLevel] = useState<string>(() => {
+    // On mount, read from localStorage, default to "Level 1"
+    const saved = localStorage.getItem("canteen_currentLevel");
+    return saved && LEVELS.includes(saved) ? saved : "Level 1";
   });
+  const [isTV, setIsTV] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  // Handle level change with localStorage persistence
+  const handleLevelChange = (level: string) => {
+    setSelectedLevel(level);
+    localStorage.setItem("canteen_currentLevel", level);
+  };
+
+  useEffect(() => {
+    setIsTV(isTVMode());
+    
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Use onSnapshot for real-time updates (sync with Admin.tsx CMS)
+  useEffect(() => {
+    setIsLoading(true);
+    setIsError(false);
+
+    const q = query(
+      collection(db, MENU_ITEMS_COLLECTION),
+      where("canteen_level", "==", selectedLevel),
+      orderBy("category"),
+      orderBy("name")
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const itemsData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as MenuItem[];
+        setItems(itemsData);
+        setIsLoading(false);
+      },
+      (err) => {
+        console.error("Error fetching items:", err);
+        setError(err instanceof Error ? err : new Error("Failed to fetch items"));
+        setIsError(true);
+        setIsLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [selectedLevel]);
 
   // Memoize menuByCategory to avoid recalculating on every render
   const menuByCategory = useMemo(() => {
@@ -112,7 +149,14 @@ const Index = () => {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className={`flex flex-col min-h-screen ${isTV ? 'tv-mode' : ''}`}>
+      {/* Offline indicator */}
+      {isOffline && (
+        <div className="bg-yellow-500 text-yellow-900 text-center py-1 text-sm font-medium">
+          📡 You are offline. Showing saved menu data.
+        </div>
+      )}
+      
       {/* Header */}
       <header className="bg-primary border-b-4 border-accent">
         <div className="container mx-auto px-6 py-5 flex justify-between items-center">
@@ -148,7 +192,7 @@ const Index = () => {
             {LEVELS.map((lvl) => (
               <button
                 key={lvl}
-                onClick={() => setSelectedLevel(lvl)}
+onClick={() => handleLevelChange(lvl)}
                 className={`px-6 py-2.5 rounded text-sm font-semibold transition-all duration-300 border-2 ${
                   selectedLevel === lvl
                     ? "bg-primary text-primary-foreground border-primary lantern-shadow"
