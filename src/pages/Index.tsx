@@ -37,18 +37,26 @@ const Index = () => {
   const { data: items = [], isLoading, isError, error } = useQuery<MenuItem[]>({
     queryKey: ["menu_items", selectedLevel],
     queryFn: async () => {
+      // Fetch all items and filter client-side to avoid index requirement
       const q = query(
         collection(db, MENU_ITEMS_COLLECTION),
-        where("canteen_level", "==", selectedLevel),
-        orderBy("category"),
-        orderBy("name")
+        where("canteen_level", "==", selectedLevel)
       );
       
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
+      // Sort client-side to avoid composite index requirement
+      const items = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as MenuItem[];
+      
+      // Sort by category then by name
+      return items.sort((a, b) => {
+        if (a.category !== b.category) {
+          return a.category.localeCompare(b.category);
+        }
+        return a.name.localeCompare(b.name);
+      });
     },
     // Cache data for 5 minutes to prevent unnecessary refetches
     staleTime: 5 * 60 * 1000,

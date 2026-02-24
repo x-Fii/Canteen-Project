@@ -2,16 +2,30 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
-// Firebase configuration
+// Firebase configuration - loaded from environment variables for security
+// Ensure .env.local is properly configured
 const firebaseConfig = {
-  apiKey: "AIzaSyDjqcam5YK1pariUOXGKLA396frJTl_8XI",
-  authDomain: "canteen-app-255e4.firebaseapp.com",
-  projectId: "canteen-app-255e4",
-  storageBucket: "canteen-app-255e4.firebasestorage.app",
-  messagingSenderId: "685386614870",
-  appId: "1:685386614870:web:24487ac7020da5245393f7",
-  measurementId: "G-91WNV3PYWN"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || ""
 };
+
+// Validate configuration
+const validateConfig = () => {
+  const required = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'appId'];
+  const missing = required.filter(key => !firebaseConfig[key as keyof typeof firebaseConfig]);
+  
+  if (missing.length > 0) {
+    console.error(`Firebase config missing required fields: ${missing.join(', ')}`);
+    console.warn('Please ensure .env.local is properly configured');
+  }
+};
+
+validateConfig();
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -22,5 +36,6 @@ export const db = getFirestore(app);
 // Initialize Auth
 export const auth = getAuth(app);
 
-// Collection name constant
+// Collection name constants
 export const MENU_ITEMS_COLLECTION = "menu_items";
+export const ADMIN_USERS_COLLECTION = "admin_users";
