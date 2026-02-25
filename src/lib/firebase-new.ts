@@ -3,7 +3,7 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getFunctions, httpsCallable } from "firebase/functions";
 import { useState, useEffect } from "react";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, orderBy, onSnapshot, getDocs, serverTimestamp, setDoc } from "firebase/firestore";
 
 // Firebase configuration - loaded from environment variables
 const firebaseConfig = {
@@ -228,3 +228,181 @@ export interface UpdateUserRoleResult {
 }
 
 export const updateUserRoleCallable = httpsCallable<UpdateUserRoleData, UpdateUserRoleResult>(functions, "updateUserRoleCallable");
+
+export interface UserData {
+  uid: string;
+  email: string | null;
+  role: string;
+  createdAt: string;
+  lastSignIn: string;
+}
+
+/**
+ * Bootstrap admin user - creates Firestore document if it doesn't exist
+ * This handles the case where an admin logs in for the first time but has no Firestore document
+ * @returns { success: boolean, message: string, isBootstrap: boolean }
+ */
+export const bootstrapAdminUser = async (): Promise<{ success: boolean; message: string; isBootstrap: boolean }> => {
+  if (!auth.currentUser) {
+    return { success: false, message: "No authenticated user", isBootstrap: false };
+  }
+
+  const userId = auth.currentUser.uid;
+  const userDocRef = doc(db, USERS_COLLECTION, userId);
+
+  try {
+    // Check if user document already exists
+    const userDoc = await getDoc(userDocRef);
+
+    if (userDoc.exists()) {
+      // User document exists, no bootstrap needed
+      return { success: true, message: "User document already exists", isBootstrap: false };
+    }
+
+    // Check custom claims to determine if user should be admin
+    const idTokenResult = await auth.currentUser.getIdTokenResult();
+    const claims = idTokenResult.claims as CustomClaims;
+    const role = claims.role || "content_manager";
+
+    // Create user document in Firestore (bootstrap)
+    await setDoc(userDocRef, {
+      email: auth.currentUser.email,
+      role: role,
+      createdAt: serverTimestamp(),
+      uid: userId,
+      bootstrappedAt: serverTimestamp(),
+    });
+
+    console.log(`[Bootstrap] Created user document for ${auth.currentUser.email} with role: ${role}`);
+    return { 
+      success: true, 
+      message: `User document created with role: ${role}`, 
+      isBootstrap: true 
+    };
+  } catch (error) {
+    console.error("[Bootstrap] Error creating user document:", error);
+    return { 
+      success: false, 
+      message: error instanceof Error ? error.message : "Failed to bootstrap user", 
+      isBootstrap: false 
+    };
+  }
+};
+
+/**
+ * Fetch all users with real-time updates using onSnapshot
+ * Includes proper error handling for Permission Denied vs Empty Collection
+ * @param callback - Function to call with updated users array
+ * @returns unsubscribe function
+ */
+export const fetchAllUsers = (
+  callback: (users: UserData[], error: Error | null, isEmpty: boolean) => void
+): (() => void) => {
+  const usersCollection = collection(db, USERS_COLLECTION);
+  const q = query(usersCollection, orderBy("email", "asc"));
+
+  const unsubscribe = onSnapshot(
+    q,
+    (snapshot) => {
+      // Check if collection is empty
+      if (snapshot.empty) {
+        console.log("[fetchAllUsers] Users collection is empty");
+        callback([], null, true);
+        return;
+      }
+
+      const users: UserData[] = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          uid: doc.id,
+          email: data.email || null,
+          role: data.role || "content_manager",
+          createdAt: data.createdAt 
+            ? (data.createdAt instanceof Date ? data.createdAt.toISOString() : new Date().toISOString())
+            : new Date().toISOString(),
+          lastSignIn: data.lastSignIn || "Never",
+        };
+      });
+
+      console.log(`[fetchAllUsers] Fetched ${users.length} users`);
+      callback(users, null, false);
+    },
+    (error) => {
+      // Handle specific Firestore errors
+      console.error("[fetchAllUsers] Error fetching users:", error);
+
+      if (error.code === "permission-denied") {
+        // Security rules denied the request - user might not be admin
+        const permissionError = new Error("Permission Denied: You don't have admin privileges to view users. Check your role in Firestore.");
+        callback([], permissionError, false);
+      } else if (error.code === "unavailable") {
+        // Firestore service unavailable
+        const unavailableError = new Error("Service Unavailable: Firestore is temporarily unavailable.");
+        callback([], unavailableError, false);
+      } else {
+        // Generic error
+        callback([], error instanceof Error ? error : new Error("Unknown error fetching users"), false);
+      }
+    }
+  );
+
+  return unsubscribe;
+};
+
+/**
+ * Fetch all users once (non-real-time) - useful for initial load
+ * Includes proper error handling
+ */
+export const fetchAllUsersOnce = async (): Promise<{ 
+  users: UserData[]; 
+  error: Error | null; 
+  isEmpty: boolean 
+}> => {
+  const usersCollection = collection(db, USERS_COLLECTION);
+  const q = query(usersCollection, orderBy("email", "asc"));
+
+  try {
+    const snapshot = await getDocs(q);
+
+    if (snapshot.empty) {
+      console.log("[fetchAllUsersOnce] Users collection is empty");
+      return { users: [], error: null, isEmpty: true };
+    }
+
+    const users: UserData[] = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        uid: doc.id,
+        email: data.email || null,
+        role: data.role || "content_manager",
+        createdAt: data.createdAt 
+          ? (data.createdAt instanceof Date ? data.createdAt.toISOString() : new Date().toISOString())
+          : new Date().toISOString(),
+        lastSignIn: data.lastSignIn || "Never",
+      };
+    });
+
+    console.log(`[fetchAllUsersOnce] Fetched ${users.length} users`);
+    return { users, error: null, isEmpty: false };
+  } catch (error) {
+    console.error("[fetchAllUsersOnce] Error fetching users:", error);
+
+    if (error instanceof Error && error.name === "FirebaseError") {
+      const firebaseError = error as { code?: string };
+      
+      if (firebaseError.code === "permission-denied") {
+        return { 
+          users: [], 
+          error: new Error("Permission Denied: You don't have admin privileges to view users."), 
+          isEmpty: false 
+        };
+      }
+    }
+
+    return { 
+      users: [], 
+      error: error instanceof Error ? error : new Error("Unknown error fetching users"), 
+      isEmpty: false 
+    };
+  }
+};

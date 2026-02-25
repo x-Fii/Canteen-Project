@@ -3,23 +3,45 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if user is admin
-    // Uses Firestore document to get role (not custom claims)
-    function isAdmin() {
-      return request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    // Helper function to check if user is content_manager
-    // Uses Firestore document to get role (not custom claims)
-    function isContentManager() {
-      return request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'content_manager';
-    }
-
     // Helper function to check if user is authenticated
     function isAuthenticated() {
       return request.auth != null;
+    }
+
+    // Helper function to check if user document exists in Firestore
+    function userDocExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    // Helper function to get user role from Firestore document
+    // Returns null if document doesn't exist
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    // Helper function to check if user is admin
+    // Checks both Firestore document (primary) and custom claims (fallback)
+    // This handles the case where the user is logged in but their document doesn't exist yet
+    function isAdmin() {
+      return request.auth != null && (
+        // Primary: Check Firestore document role
+        (userDocExists() && getUserRole() == 'admin') ||
+        // Fallback: Check custom claims (for bootstrapped admins without Firestore doc)
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'admin'
+      );
+    }
+
+    // Helper function to check if user is content_manager
+    // Checks both Firestore document and custom claims
+    function isContentManager() {
+      return request.auth != null && (
+        // Primary: Check Firestore document role
+        (userDocExists() && getUserRole() == 'content_manager') ||
+        // Fallback: Check custom claims
+        request.auth.token.content_manager == true ||
+        request.auth.token.role == 'content_manager'
+      );
     }
 
     // Helper function to check if the target user is an admin
@@ -31,13 +53,23 @@ service cloud.firestore {
 
     // Users collection - only admins can read/write
     // Admins cannot delete other admins (manual Firebase Console only)
+    // List operation (getAll, list) requires admin role
+    // Individual document operations
     match /users/{userId} {
-      allow read: if isAdmin();
+      // Read individual document - allow if user is viewing their own doc OR is admin
+      allow get: if request.auth.uid == userId || isAdmin();
+      
+      // List all users - only admins can see the full list
+      allow list: if isAdmin();
+      
+      // Create - only admins can create users
       allow create: if isAdmin();
+      
       // Update allowed for admins, but prevent changing admin role to prevent privilege escalation
       allow update: if isAdmin() && 
         (!('role' in request.resource.data) || request.resource.data.role != 'admin' || 
          (resource.data.role == 'admin' && request.resource.data.role == 'admin'));
+      
       // Delete is only allowed for non-admin users
       // Admins cannot be deleted via UI - requires manual Firebase Console
       allow delete: if isAdmin() && resource.data.role != 'admin';

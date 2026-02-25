@@ -10,7 +10,11 @@ import {
   getUsersCallable, 
   deleteUserCallable, 
   updateUserRoleCallable,
-  useAdminStatus 
+  useAdminStatus,
+  bootstrapAdminUser,
+  fetchAllUsers,
+  fetchAllUsersOnce,
+  UserData
 } from "@/lib/firebase-new";
 import { 
   collection, 
@@ -32,7 +36,7 @@ import {
   createUserWithEmailAndPassword
 } from "firebase/auth";
 import { Link } from "react-router-dom";
-import { Pencil, Trash2, LogOut, Loader2, Eye, EyeOff, UserPlus, Users, Shield, ShieldOff } from "lucide-react";
+import { Pencil, Trash2, LogOut, Loader2, Eye, EyeOff, UserPlus, Users, Shield, ShieldOff, AlertTriangle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { CreateUserModal } from "@/components/CreateUserModal";
@@ -175,6 +179,8 @@ const Admin = () => {
     lastSignIn: string;
   }>>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [usersError, setUsersError] = useState<Error | null>(null);
+  const [isUsersEmpty, setIsUsersEmpty] = useState(false);
   const [showCreateUserPopup, setShowCreateUserPopup] = useState(false);
   const [newUserForm, setNewUserForm] = useState({
     email: "",
@@ -188,9 +194,21 @@ const Admin = () => {
   // Auth State Listener
   // ====================
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       setIsAuthLoading(false);
+      
+      // Bootstrap admin user on first login if they have admin claims but no Firestore document
+      if (user) {
+        try {
+          const bootstrapResult = await bootstrapAdminUser();
+          if (bootstrapResult.isBootstrap) {
+            toast.success("Welcome! Your admin profile has been created.");
+          }
+        } catch (error) {
+          console.error("Bootstrap error:", error);
+        }
+      }
     });
     return () => unsubscribe();
   }, []);
@@ -216,18 +234,45 @@ const Admin = () => {
   }, [user, isAdminFromHook]);
 
   // ====================
-  // Fetch Users (Admin Only)
+  // Fetch Users (Admin Only) - with error handling
   // ====================
   const fetchUsers = async () => {
     setIsLoadingUsers(true);
+    setUsersError(null);
+    setIsUsersEmpty(false);
+    
     try {
+      // Try using the callable function first (more reliable for admins)
       const result = await getUsersCallable();
       if (result.data.success) {
         setUsers(result.data.users);
+        setIsUsersEmpty(result.data.users.length === 0);
       }
     } catch (error) {
-      console.error("Error fetching users:", error);
-      toast.error("Failed to load users");
+      console.error("Error fetching users via callable:", error);
+      
+      // Fallback: try direct Firestore query with fetchAllUsersOnce
+      try {
+        const { users: directUsers, error: directError, isEmpty } = await fetchAllUsersOnce();
+        
+        if (directError) {
+          // Check if it's a permission error
+          if (directError.message.includes("Permission Denied") || directError.message.includes("admin privileges")) {
+            setUsersError(new Error("You don't have admin privileges to view users. Please check your role in Firebase."));
+            toast.error("Access denied: Admin privileges required");
+          } else {
+            setUsersError(directError);
+            toast.error(directError.message);
+          }
+        } else {
+          setUsers(directUsers);
+          setIsUsersEmpty(isEmpty);
+        }
+      } catch (fallbackError) {
+        console.error("Fallback fetch also failed:", fallbackError);
+        setUsersError(error instanceof Error ? error : new Error("Failed to load users"));
+        toast.error("Failed to load users");
+      }
     } finally {
       setIsLoadingUsers(false);
     }
@@ -913,10 +958,48 @@ const Admin = () => {
                         Loading...
                       </td>
                     </tr>
-                  ) : users.length === 0 ? (
+                  ) : usersError ? (
+                    // Error State - Show fallback UI
                     <tr>
-                      <td colSpan={5} className="px-5 py-8 text-center text-muted-foreground">
-                        No users found.
+                      <td colSpan={5} className="px-5 py-8">
+                        <div className="flex flex-col items-center gap-4">
+                          <div className="flex items-center gap-2 text-destructive">
+                            <AlertTriangle className="h-5 w-5" />
+                            <span className="font-medium">{usersError.message}</span>
+                          </div>
+                          <p className="text-muted-foreground text-sm text-center">
+                            This usually means your user document doesn't exist in Firestore or you don't have admin privileges.
+                          </p>
+                          <button
+                            onClick={fetchUsers}
+                            className="flex items-center gap-2 text-primary hover:text-primary/70 text-sm"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            Try Again
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : isUsersEmpty || users.length === 0 ? (
+                    // Empty State - Show fallback UI with helpful message
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8">
+                        <div className="flex flex-col items-center gap-3">
+                          <Users className="h-8 w-8 text-muted-foreground" />
+                          <div className="text-center">
+                            <p className="text-muted-foreground font-medium">No users found</p>
+                            <p className="text-muted-foreground text-sm mt-1">
+                              The users collection appears to be empty. This is expected for first-time setup.
+                            </p>
+                          </div>
+                          <button
+                            onClick={fetchUsers}
+                            className="flex items-center gap-2 text-primary hover:text-primary/70 text-sm mt-2"
+                          >
+                            <RefreshCw className="h-4 w-4" />
+                            Refresh
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ) : (
