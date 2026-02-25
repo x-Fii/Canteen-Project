@@ -8,11 +8,9 @@
  */
 
 import {setGlobalOptions} from "firebase-functions";
-import {onRequest} from "firebase-functions/https";
+import {onCall} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
-
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
+import { createUser, deleteUser, getUsers, updateUserRole, verifyAdmin } from "./admin";
 
 // For cost control, you can set the maximum number of containers that can be
 // running at the same time. This helps mitigate the impact of unexpected
@@ -26,7 +24,136 @@ import * as logger from "firebase-functions/logger";
 // this will be the maximum concurrent request count.
 setGlobalOptions({ maxInstances: 10 });
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+// ============================================
+// Callable Functions for User Management
+// ============================================
+
+/**
+ * Create a new user with custom claims (admin/content_manager role)
+ * Only callable by authenticated admins
+ */
+export const createUserCallable = onCall(
+  { cors: ["http://localhost:5173", "https://your-project.firebaseapp.com"] },
+  async (request) => {
+    // Check if the caller is authenticated
+    if (!request.auth) {
+      throw new Error("Unauthorized: Authentication required");
+    }
+
+    const { email, password, role } = request.data;
+
+    // Validate input
+    if (!email || !password || !role) {
+      throw new Error("Missing required fields: email, password, role");
+    }
+
+    if (!["admin", "content_manager"].includes(role)) {
+      throw new Error("Invalid role. Must be 'admin' or 'content_manager'");
+    }
+
+    // Verify the caller has admin privileges
+    const isAdmin = await verifyAdmin(request.auth.uid);
+    if (!isAdmin) {
+      throw new Error("Unauthorized: Only admins can create users");
+    }
+
+    logger.info(`Creating user with email: ${email} and role: ${role}`, {
+      uid: request.auth.uid,
+    });
+
+    return await createUser({ email, password, role });
+  }
+);
+
+/**
+ * Delete a user with admin protection logic
+ * Prevents Admin from deleting other Admins
+ */
+export const deleteUserCallable = onCall(
+  { cors: ["http://localhost:5173", "https://your-project.firebaseapp.com"] },
+  async (request) => {
+    // Check if the caller is authenticated
+    if (!request.auth) {
+      throw new Error("Unauthorized: Authentication required");
+    }
+
+    const { uid } = request.data;
+
+    if (!uid) {
+      throw new Error("Missing required field: uid");
+    }
+
+    // Verify the caller has admin privileges
+    const isAdmin = await verifyAdmin(request.auth.uid);
+    if (!isAdmin) {
+      throw new Error("Unauthorized: Only admins can delete users");
+    }
+
+    logger.info(`Deleting user: ${uid}`, {
+      requestedBy: request.auth.uid,
+    });
+
+    // Pass the calling user's UID for permission check
+    return await deleteUser({ uid }, request.auth.uid);
+  }
+);
+
+/**
+ * Get all users with their roles
+ */
+export const getUsersCallable = onCall(
+  { cors: ["http://localhost:5173", "https://your-project.firebaseapp.com"] },
+  async (request) => {
+    // Check if the caller is authenticated
+    if (!request.auth) {
+      throw new Error("Unauthorized: Authentication required");
+    }
+
+    // Verify the caller has admin privileges
+    const isAdmin = await verifyAdmin(request.auth.uid);
+    if (!isAdmin) {
+      throw new Error("Unauthorized: Only admins can view users");
+    }
+
+    logger.info(`Getting all users`, {
+      requestedBy: request.auth.uid,
+    });
+
+    return await getUsers();
+  }
+);
+
+/**
+ * Update a user's role
+ */
+export const updateUserRoleCallable = onCall(
+  { cors: ["http://localhost:5173", "https://your-project.firebaseapp.com"] },
+  async (request) => {
+    // Check if the caller is authenticated
+    if (!request.auth) {
+      throw new Error("Unauthorized: Authentication required");
+    }
+
+    const { uid, role } = request.data;
+
+    if (!uid || !role) {
+      throw new Error("Missing required fields: uid, role");
+    }
+
+    if (!["admin", "content_manager"].includes(role)) {
+      throw new Error("Invalid role. Must be 'admin' or 'content_manager'");
+    }
+
+    // Verify the caller has admin privileges
+    const isAdmin = await verifyAdmin(request.auth.uid);
+    if (!isAdmin) {
+      throw new Error("Unauthorized: Only admins can update user roles");
+    }
+
+    logger.info(`Updating user role: ${uid} to ${role}`, {
+      requestedBy: request.auth.uid,
+    });
+
+    return await updateUserRole(uid, role, request.auth.uid);
+  }
+);

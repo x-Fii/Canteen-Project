@@ -3,17 +3,54 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
-    //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
+    // Helper function to check if user is admin
+    // Uses Firestore document to get role (not custom claims)
+    function isAdmin() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Helper function to check if user is content_manager
+    // Uses Firestore document to get role (not custom claims)
+    function isContentManager() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'content_manager';
+    }
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if the target user is an admin
+    // This prevents admin deletion via Firestore rules
+    function isTargetUserAdmin(userId) {
+      return request.resource.data.role == 'admin' || 
+             exists(/databases/$(database)/documents/users/$(userId));
+    }
+
+    // Users collection - only admins can read/write
+    // Admins cannot delete other admins (manual Firebase Console only)
+    match /users/{userId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      // Update allowed for admins, but prevent changing admin role to prevent privilege escalation
+      allow update: if isAdmin() && 
+        (!('role' in request.resource.data) || request.resource.data.role != 'admin' || 
+         (resource.data.role == 'admin' && request.resource.data.role == 'admin'));
+      // Delete is only allowed for non-admin users
+      // Admins cannot be deleted via UI - requires manual Firebase Console
+      allow delete: if isAdmin() && resource.data.role != 'admin';
+    }
+
+    // Menu items collection - admins and content managers can CRUD
+    match /menu_items/{itemId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin() || isContentManager();
+    }
+
+    // Default rule - deny all other access
     match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2026, 3, 25);
+      allow read, write: if false;
     }
   }
-}

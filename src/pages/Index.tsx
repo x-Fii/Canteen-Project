@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { db, MENU_ITEMS_COLLECTION } from "@/lib/firebase";
+import { db, MENU_ITEMS_COLLECTION } from "@/lib/firebase-new";
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { Link } from "react-router-dom";
 

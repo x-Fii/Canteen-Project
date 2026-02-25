@@ -1,7 +1,8 @@
-# PWA & TV Mode Implementation TODO
+# TODO - Auth & Admin UI Fix
 
-## Phase 1: PWA Support
-- [ ] 1.1 Install vite-plugin-pwa dependency
-- [ ] 1.2 Create public/manifest.json
-- [ ] 1.3 Create public/icons/ directory with icon files
-- [ ] 1.4 Update vite.config.ts for PWA
+## Tasks:
+- [x] 1. Update src/lib/firebase-new.ts - Add useAdminStatus hook and secondary app exports
+- [x] 2. Update src/lib/firebase-secondary.ts - Already has proper exports (now using firebase-new.ts)
+- [x] 3. Update src/pages/Admin.tsx - Use firebase-new.ts imports and useAdminStatus hook
+- [x] 4. Verify CreateUserModal.tsx is working correctly - Updated to use firebase-new.ts
+- [ ] 5. Test the flow

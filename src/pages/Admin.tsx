@@ -1,6 +1,17 @@
 import { useState, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { db, auth, MENU_ITEMS_COLLECTION, ADMIN_USERS_COLLECTION } from "@/lib/firebase";
+import { 
+  db, 
+  auth, 
+  MENU_ITEMS_COLLECTION, 
+  getUserRole, 
+  UserRole, 
+  createUserCallable, 
+  getUsersCallable, 
+  deleteUserCallable, 
+  updateUserRoleCallable,
+  useAdminStatus 
+} from "@/lib/firebase-new";
 import { 
   collection, 
   query, 
@@ -10,24 +21,21 @@ import {
   updateDoc, 
   doc, 
   deleteDoc,
-  serverTimestamp,
-  getDoc,
-  setDoc
+  serverTimestamp
 } from "firebase/firestore";
 import { 
   signInWithEmailAndPassword, 
   signOut, 
   onAuthStateChanged, 
   User,
-  createUserWithEmailAndPassword,
   sendPasswordResetEmail,
-  reauthenticateWithCredential,
-  EmailAuthProvider
+  createUserWithEmailAndPassword
 } from "firebase/auth";
 import { Link } from "react-router-dom";
-import { Pencil, Trash2, LogOut, Loader2, UserPlus, Users, Shield, ShieldAlert, Mail, KeyRound, Eye, EyeOff, X } from "lucide-react";
+import { Pencil, Trash2, LogOut, Loader2, Eye, EyeOff, UserPlus, Users, Shield, ShieldOff } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { CreateUserModal } from "@/components/CreateUserModal";
 
 // Constants
 const CATEGORIES = ["Main Course", "Dessert", "Beverage", "Snacks"];
@@ -108,17 +116,6 @@ const passwordResetSchema = z.object({
     .transform(sanitizeInput),
 });
 
-// Admin User Schema
-const adminUserSchema = z.object({
-  email: z.string()
-    .trim()
-    .min(1, "Email is required")
-    .email("Invalid email format")
-    .toLowerCase()
-    .transform(sanitizeInput),
-  role: z.enum(["super_admin", "admin"]),
-});
-
 // Types
 type MenuItem = {
   id: string;
@@ -127,14 +124,6 @@ type MenuItem = {
   category: string;
   canteen_level: string;
   created_at: string;
-};
-
-type AdminUser = {
-  id: string;
-  email: string;
-  role: "super_admin" | "admin";
-  created_at: string;
-  created_by: string;
 };
 
 // Auth Mode Enum
@@ -161,10 +150,6 @@ const Admin = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [editItem, setEditItem] = useState<MenuItem | null>(null);
   
-  // Admin Users State
-  const [adminUsers, setAdminUsers] = useState<AdminUser[]>([]);
-  const [isLoadingAdmins, setIsLoadingAdmins] = useState(false);
-  
   // Forms State
   const [authForm, setAuthForm] = useState({ 
     email: "", 
@@ -177,11 +162,27 @@ const Admin = () => {
     category: CATEGORIES[0],
     canteen_level: LEVELS[0],
   });
-  
-  // Reauthenticate modal
-  const [showReauthModal, setShowReauthModal] = useState(false);
-  const [reauthForm, setReauthForm] = useState({ password: "" });
-  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
+  // User Management State - Using useAdminStatus hook for Firestore-based admin check
+  const { isAdmin: isAdminFromHook, isLoading: isAdminLoading } = useAdminStatus();
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [users, setUsers] = useState<Array<{
+    uid: string;
+    email: string | null;
+    role: string;
+    createdAt: string;
+    lastSignIn: string;
+  }>>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [showCreateUserPopup, setShowCreateUserPopup] = useState(false);
+  const [newUserForm, setNewUserForm] = useState({
+    email: "",
+    password: "",
+    role: "content_manager" as UserRole,
+  });
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
 
   // ====================
   // Auth State Listener
@@ -193,6 +194,123 @@ const Admin = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // ====================
+  // Load User Role and Check Admin Status - Using useAdminStatus hook
+  // ====================
+  useEffect(() => {
+    if (user) {
+      // Use the hook's isAdminFromHook value
+      if (isAdminFromHook) {
+        setIsAdmin(true);
+        fetchUsers();
+      } else {
+        setIsAdmin(false);
+        setUsers([]);
+      }
+    } else {
+      setUserRole(null);
+      setIsAdmin(false);
+      setUsers([]);
+    }
+  }, [user, isAdminFromHook]);
+
+  // ====================
+  // Fetch Users (Admin Only)
+  // ====================
+  const fetchUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const result = await getUsersCallable();
+      if (result.data.success) {
+        setUsers(result.data.users);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error("Failed to load users");
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  // ====================
+  // Create User Handler
+  // ====================
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreatingUser(true);
+    
+    try {
+      if (!newUserForm.email || !newUserForm.password) {
+        toast.error("Email and password are required");
+        return;
+      }
+
+      const result = await createUserCallable({
+        email: newUserForm.email,
+        password: newUserForm.password,
+        role: newUserForm.role,
+      });
+
+      if (result.data.success) {
+        toast.success(`User created successfully as ${result.data.role}!`);
+        setNewUserForm({ email: "", password: "", role: "content_manager" });
+        setShowCreateUserPopup(false);
+        fetchUsers();
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create user";
+      toast.error(errorMessage);
+    } finally {
+      setIsCreatingUser(false);
+    }
+  };
+
+  // ====================
+  // Delete User Handler
+  // ====================
+  const handleDeleteUser = async (uid: string, role: string) => {
+    if (role === "admin") {
+      toast.error("Admins cannot be deleted via UI. Please use Firebase Console.");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to delete this user?")) {
+      return;
+    }
+
+    try {
+      const result = await deleteUserCallable({ uid });
+      if (result.data.success) {
+        toast.success("User deleted successfully!");
+        fetchUsers();
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to delete user";
+      toast.error(errorMessage);
+    }
+  };
+
+  // ====================
+  // Update User Role Handler
+  // ====================
+  const handleUpdateUserRole = async (uid: string, newRole: UserRole, currentRole: string) => {
+    if (currentRole === "admin" && newRole !== "admin") {
+      toast.error("Admins cannot modify other Admins.");
+      return;
+    }
+
+    try {
+      const result = await updateUserRoleCallable({ uid, role: newRole });
+      if (result.data.success) {
+        toast.success(`User role updated to ${newRole}!`);
+        fetchUsers();
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update user role";
+      toast.error(errorMessage);
+    }
+  };
 
   // ====================
   // Load Menu Items
@@ -224,40 +342,6 @@ const Admin = () => {
       (error) => {
         console.error("Error fetching items:", error);
         setIsLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [user]);
-
-  // ====================
-  // Load Admin Users
-  // ====================
-  useEffect(() => {
-    if (!user) {
-      setAdminUsers([]);
-      setIsLoadingAdmins(false);
-      return;
-    }
-
-    const q = query(
-      collection(db, ADMIN_USERS_COLLECTION),
-      orderBy("email")
-    );
-
-    const unsubscribe = onSnapshot(q, 
-      (snapshot) => {
-        const usersData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          created_at: doc.data().created_at?.toDate?.()?.toISOString() || new Date().toISOString()
-        })) as AdminUser[];
-        setAdminUsers(usersData);
-        setIsLoadingAdmins(false);
-      },
-      (error) => {
-        console.error("Error fetching admin users:", error);
-        setIsLoadingAdmins(false);
       }
     );
 
@@ -308,21 +392,13 @@ const Admin = () => {
       });
 
       // Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(
+      await createUserWithEmailAndPassword(
         auth, 
         validated.email, 
         validated.password
       );
 
-      // Add to admin_users collection with admin role
-      await setDoc(doc(db, ADMIN_USERS_COLLECTION, userCredential.user.uid), {
-        email: validated.email,
-        role: "admin",
-        created_at: serverTimestamp(),
-        created_by: userCredential.user.uid,
-      });
-
-      toast.success("Account created successfully! You are now an admin.");
+      toast.success("Account created successfully! You can now manage the menu.");
       setAuthForm({ email: "", password: "", confirmPassword: "" });
       setAuthMode("signin");
     } catch (err: unknown) {
@@ -450,66 +526,6 @@ const Admin = () => {
   };
 
   // ====================
-  // Admin User Handlers
-  // ====================
-
-  const handleAddAdmin = async (email: string, role: "super_admin" | "admin") => {
-    try {
-      // Note: In production, you'd want to send an invitation email
-      // and have the user complete registration
-      // For now, we'll just add them to the admin collection
-      // The actual user would need to sign up
-      
-      // For demonstration, we'll create a pending invitation
-      const id = Date.now().toString();
-      await setDoc(doc(db, ADMIN_USERS_COLLECTION, id), {
-        email: email.toLowerCase(),
-        role,
-        created_at: serverTimestamp(),
-        created_by: user?.uid || "system",
-        pending: true, // Indicates invitation not yet accepted
-      });
-      
-      toast.success(`Admin invitation sent to ${email}`);
-    } catch (err) {
-      console.error("Error adding admin:", err);
-      toast.error("Failed to add admin");
-    }
-  };
-
-  const handleRemoveAdmin = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, ADMIN_USERS_COLLECTION, id));
-      toast.success("Admin removed successfully!");
-    } catch (err) {
-      console.error("Error removing admin:", err);
-      toast.error("Failed to remove admin");
-    }
-  };
-
-  // ====================
-  // Reauthentication Handler
-  // ====================
-
-  const handleReauthenticate = async () => {
-    if (!user || !reauthForm.password) return;
-    
-    try {
-      const credential = EmailAuthProvider.credential(user.email!, reauthForm.password);
-      await reauthenticateWithCredential(user, credential);
-      setShowReauthModal(false);
-      setReauthForm({ password: "" });
-      
-      if (pendingAction) {
-        pendingAction();
-        setPendingAction(null);
-      }
-    } catch (err) {
-      toast.error("Reauthentication failed. Please check your password.");
-    }
-  };
-
-  // ====================
   // Render Helpers
   // ====================
 
@@ -621,33 +637,16 @@ const Admin = () => {
           </form>
           
           <div className="mt-6 flex flex-col gap-2 text-center">
-            {!isForgotPassword && (
-              <>
-                <button
-                  onClick={() => {
-                    setAuthMode(isSignUp ? "signin" : "signup");
-                    setAuthForm({ email: "", password: "", confirmPassword: "" });
-                  }}
-                  className="text-primary text-sm hover:underline"
-                >
-                  {isSignUp 
-                    ? "Already have an account? Sign In" 
-                    : "Don't have an account? Sign Up"
-                  }
-                </button>
-                
-                {!isSignUp && (
-                  <button
-                    onClick={() => {
-                      setAuthMode("forgot_password");
-                      setAuthForm(f => ({ ...f, password: "", confirmPassword: "" }));
-                    }}
-                    className="text-muted-foreground text-sm hover:text-primary"
-                  >
-                    Forgot Password?
-                  </button>
-                )}
-              </>
+            {!isForgotPassword && !isSignUp && (
+              <button
+                onClick={() => {
+                  setAuthMode("forgot_password");
+                  setAuthForm(f => ({ ...f, password: "", confirmPassword: "" }));
+                }}
+                className="text-muted-foreground text-sm hover:text-primary"
+              >
+                Forgot Password?
+              </button>
             )}
             
             {isForgotPassword && (
@@ -691,43 +690,6 @@ const Admin = () => {
   
   return (
     <div className="min-h-screen bg-background">
-      {/* Reauthentication Modal */}
-      {showReauthModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-card rounded-lg p-6 w-full max-w-md border-2 border-accent/20">
-            <h3 className="text-lg font-semibold mb-4">Reauthentication Required</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Please enter your password to confirm your identity.
-            </p>
-            <input
-              type="password"
-              value={reauthForm.password}
-              onChange={(e) => setReauthForm({ password: e.target.value })}
-              placeholder="Your password"
-              className="w-full rounded-lg border bg-background px-3 py-2 text-sm mb-4"
-            />
-            <div className="flex gap-2">
-              <button
-                onClick={() => {
-                  setShowReauthModal(false);
-                  setReauthForm({ password: "" });
-                  setPendingAction(null);
-                }}
-                className="flex-1 bg-muted hover:bg-muted/80 text-muted-foreground py-2 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReauthenticate}
-                className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground py-2 rounded-lg"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Nav */}
       <nav className="bg-primary border-b-4 border-accent">
         <div className="container mx-auto px-6 py-4 flex justify-between items-center">
@@ -843,89 +805,6 @@ const Admin = () => {
           </form>
         </div>
 
-        {/* Admin Management Section */}
-        <div className="bg-card rounded-lg lantern-shadow p-6 mb-8 border-2 border-accent/20">
-          <h2 className="text-lg font-display font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Admin User Management · 管理员管理
-          </h2>
-          
-          {/* Add Admin Form */}
-          <div className="mb-6 p-4 bg-muted/30 rounded-lg">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Add New Admin</h3>
-            <AddAdminForm onAdd={handleAddAdmin} />
-          </div>
-          
-          {/* Admin Users List */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="bg-muted/50">
-                  {["Email", "Role", "Created At", "Actions"].map((h) => (
-                    <th
-                      key={h}
-                      className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {isLoadingAdmins ? (
-                  <tr>
-                    <td colSpan={4} className="px-5 py-8 text-center text-muted-foreground">
-                      Loading...
-                    </td>
-                  </tr>
-                ) : adminUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="px-5 py-8 text-center text-muted-foreground">
-                      No admin users yet. Add one above!
-                    </td>
-                  </tr>
-                ) : (
-                  adminUsers.map((admin) => (
-                    <tr key={admin.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-5 py-4 text-foreground">{admin.email}</td>
-                      <td className="px-5 py-4">
-                        <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
-                          admin.role === "super_admin" 
-                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" 
-                            : "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                        }`}>
-                          {admin.role === "super_admin" ? "Super Admin" : "Admin"}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-muted-foreground">
-                        {admin.created_at ? new Date(admin.created_at).toLocaleDateString() : "N/A"}
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex gap-2">
-                          {/* Don't allow removing yourself or super admins */}
-                          {admin.email !== user?.email && (
-                            <button
-                              onClick={() => {
-                                if (confirm("Are you sure you want to remove this admin?")) {
-                                  handleRemoveAdmin(admin.id);
-                                }
-                              }}
-                              className="text-destructive hover:text-destructive/70 transition-colors"
-                              aria-label="Remove admin"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
         {/* Menu Items Table */}
         <div className="bg-card rounded-lg lantern-shadow overflow-hidden border-2 border-accent/20">
           <h2 className="text-lg font-display font-semibold p-6 bg-primary/5 border-b text-foreground">
@@ -996,66 +875,95 @@ const Admin = () => {
             </table>
           </div>
         </div>
-      </div>
-    </div>
-  );
-};
 
-// ====================
-// Add Admin Sub-Component
-// ====================
+        {/* User Management Section - Admin Only */}
+        {isAdmin && (
+          <div className="bg-card rounded-lg lantern-shadow overflow-hidden border-2 border-accent/20 mt-8">
+            <div className="p-6 bg-primary/5 border-b flex justify-between items-center">
+              <h2 className="text-lg font-display font-semibold text-foreground">
+                👥 User Management · 用户管理
+              </h2>
+              <button
+                onClick={() => setShowCreateUserPopup(true)}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 px-4 rounded-lg transition-colors flex items-center gap-2"
+              >
+                <UserPlus className="h-4 w-4" />
+                Add User
+              </button>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-muted/50">
+                    {["Email", "Role", "Created", "Last Sign In", "Actions"].map((h) => (
+                      <th
+                        key={h}
+                        className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+                      >
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoadingUsers ? (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-muted-foreground">
+                        Loading...
+                      </td>
+                    </tr>
+                  ) : users.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-muted-foreground">
+                        No users found.
+                      </td>
+                    </tr>
+                  ) : (
+                    users.map((u) => (
+                      <tr key={u.uid} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                        <td className="px-5 py-4 text-foreground">{u.email}</td>
+                        <td className="px-5 py-4">
+                          <span className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
+                            u.role === "admin" 
+                              ? "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300"
+                              : "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
+                          }`}>
+                            {u.role === "admin" ? <><Shield className="h-3 w-3 inline mr-1" />Admin</> : <><ShieldOff className="h-3 w-3 inline mr-1" />Content Manager</>}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4 text-foreground">{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "N/A"}</td>
+                        <td className="px-5 py-4 text-foreground">{u.lastSignIn ? new Date(u.lastSignIn).toLocaleDateString() : "Never"}</td>
+                        <td className="px-5 py-4">
+                          <div className="flex gap-2">
+                            {u.role !== "admin" && (
+                              <button
+                                onClick={() => handleDeleteUser(u.uid, u.role)}
+                                className="text-destructive hover:text-destructive/70 transition-colors"
+                                aria-label="Delete"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
-const AddAdminForm = ({ onAdd }: { onAdd: (email: string, role: "super_admin" | "admin") => void }) => {
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"super_admin" | "admin">("admin");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    
-    setIsSubmitting(true);
-    try {
-      await onAdd(email, role);
-      setEmail("");
-      setRole("admin");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-wrap gap-3 items-end">
-      <div className="flex-1 min-w-[200px]">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="admin@example.com"
-          className="w-full rounded-lg border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          required
+        {/* Create User Modal - Uses Secondary Firebase App to prevent admin logout */}
+        <CreateUserModal
+          isOpen={showCreateUserPopup}
+          onClose={() => setShowCreateUserPopup(false)}
+          onSuccess={fetchUsers}
         />
       </div>
-      <div className="min-w-[150px]">
-        <select
-          title="Select admin role"
-          value={role}
-          onChange={(e) => setRole(e.target.value as "super_admin" | "admin")}
-          className="w-full rounded-lg border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        >
-          <option value="admin">Admin</option>
-          <option value="super_admin">Super Admin</option>
-        </select>
-      </div>
-      <button
-        type="submit"
-        disabled={isSubmitting || !email.trim()}
-        className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold py-2 px-4 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-      >
-        {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
-        Add Admin
-      </button>
-    </form>
+    </div>
   );
 };
 
