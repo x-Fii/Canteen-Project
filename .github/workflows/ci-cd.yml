@@ -98,7 +98,7 @@ jobs:
       # 5. Authenticate with Service Account
       - name: Authenticate Firebase
         run: |
-          printf "%s" "$GCP_SA_KEY" > service-account.json
+          printf '%s' "$GCP_SA_KEY" > service-account.json
           export GOOGLE_APPLICATION_CREDENTIALS="$PWD/service-account.json"
           firebase projects:list
         env:
