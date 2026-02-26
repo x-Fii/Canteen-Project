@@ -136,23 +136,10 @@ jobs:
 
       - name: Authenticate with Firebase
         run: |
-          if [ -n "$FIREBASE_TOKEN" ]; then
-            echo "Using FIREBASE_TOKEN authentication"
-            firebase login:ci --token "$FIREBASE_TOKEN"
-          elif [ -n "$FIREBASE_PRIVATE_KEY" ] && [ -n "$FIREBASE_CLIENT_EMAIL" ]; then
-            echo "Using Service Account authentication"
-            echo "$FIREBASE_PRIVATE_KEY" > service-account-key.json
-            gcloud auth activate-service-account "$FIREBASE_CLIENT_EMAIL" --key-file=service-account-key.json --project="$FIREBASE_PROJECT_ID"
-            rm -f service-account-key.json
-          else
-            echo "No authentication credentials provided"
-            exit 1
-          fi
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
-          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
-          FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          # gcloud is already authenticated via setup-gcloud action with Workload Identity
+          # Firebase CLI will automatically use the Application Default Credentials
+          echo "Using gcloud authenticated via Workload Identity Federation"
+          gcloud auth list
         continue-on-error: false
 
       - name: Validate firebase.json
@@ -201,23 +188,10 @@ jobs:
 
       - name: Authenticate with Firebase
         run: |
-          if [ -n "$FIREBASE_TOKEN" ]; then
-            echo "Using FIREBASE_TOKEN authentication"
-            firebase login:ci --token "$FIREBASE_TOKEN"
-          elif [ -n "$FIREBASE_PRIVATE_KEY" ] && [ -n "$FIREBASE_CLIENT_EMAIL" ]; then
-            echo "Using Service Account authentication"
-            echo "$FIREBASE_PRIVATE_KEY" > service-account-key.json
-            gcloud auth activate-service-account "$FIREBASE_CLIENT_EMAIL" --key-file=service-account-key.json --project="$FIREBASE_PROJECT_ID"
-            rm -f service-account-key.json
-          else
-            echo "No authentication credentials provided"
-            exit 1
-          fi
-        env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
-          FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
-          FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
-          FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          # gcloud is already authenticated via setup-gcloud action with Workload Identity
+          # Firebase CLI will automatically use the Application Default Credentials
+          echo "Using gcloud authenticated via Workload Identity Federation"
+          gcloud auth list
         continue-on-error: false
 
       - name: Deploy to Firebase Functions
