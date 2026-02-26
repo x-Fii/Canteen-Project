@@ -128,25 +128,17 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          version: 'latest'
-          project_id: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-
-      - name: Authenticate with Firebase
-        run: |
-          # gcloud is already authenticated via setup-gcloud action with Workload Identity
-          # Firebase CLI will automatically use the Application Default Credentials
-          echo "Using gcloud authenticated via Workload Identity Federation"
-          gcloud auth list
-        continue-on-error: false
-
-      - name: Validate firebase.json
-        run: firebase projects:list || true
-
       - name: Deploy to Firebase Hosting
-        run: firebase deploy --only hosting --project ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -n "$FIREBASE_TOKEN" ]; then
+            echo "Using FIREBASE_TOKEN authentication"
+            firebase deploy --only hosting --token "$FIREBASE_TOKEN" --project ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          else
+            echo "Error: FIREBASE_TOKEN not provided"
+            exit 1
+          fi
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         continue-on-error: false
 
   # ============================================================================
@@ -180,20 +172,15 @@ jobs:
       - name: Install Firebase CLI
         run: npm install -g firebase-tools
 
-      - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          version: 'latest'
-          project_id: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-
-      - name: Authenticate with Firebase
-        run: |
-          # gcloud is already authenticated via setup-gcloud action with Workload Identity
-          # Firebase CLI will automatically use the Application Default Credentials
-          echo "Using gcloud authenticated via Workload Identity Federation"
-          gcloud auth list
-        continue-on-error: false
-
       - name: Deploy to Firebase Functions
-        run: firebase deploy --only functions --project ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -n "$FIREBASE_TOKEN" ]; then
+            echo "Using FIREBASE_TOKEN authentication"
+            firebase deploy --only functions --token "$FIREBASE_TOKEN" --project ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          else
+            echo "Error: FIREBASE_TOKEN not provided"
+            exit 1
+          fi
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         continue-on-error: false
