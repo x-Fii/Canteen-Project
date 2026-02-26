@@ -202,18 +202,6 @@ The app will be available at `http://localhost:5173`
 
 ---
 
-## 🔧 Tech Stack Exclusions
-
-This project **does NOT** use:
-- ~~Next.js~~
-- ~~Prisma~~
-- ~~SQLite~~
-- ~~Any other backend framework~~
-
-The backend logic is handled entirely by **Firebase Cloud Functions** for user management operations.
-
----
-
 ## 📄 License
 
 MIT License - Feel free to use this project for your own canteen management system.
