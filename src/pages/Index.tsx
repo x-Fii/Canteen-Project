@@ -1,44 +1,38 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { db, MENU_ITEMS_COLLECTION } from "@/lib/firebase-new";
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, type DocumentData } from "firebase/firestore";
 import { Link } from "react-router-dom";
-
-const LEVELS = ["Level 1", "Level 2", "Level 3"];
-const CATEGORIES = ["Main Course", "Dessert", "Beverage", "Snacks"];
+import {
+  LEVELS,
+  CATEGORIES,
+  CATEGORY_GRADIENTS,
+  CATEGORY_EMOJIS,
+  DEFAULT_LEVEL,
+  STORAGE_KEYS,
+  type CanteenLevel,
+  type MenuCategory,
+} from "@/lib/constants";
+import { logger } from "@/lib/logger";
 
 interface MenuItem {
   id: string;
   name: string;
   price: number;
-  category: string;
-  canteen_level: string;
+  category: MenuCategory;
+  canteen_level: CanteenLevel;
   created_at: string;
 }
 
-const CATEGORY_GRADIENTS: Record<string, string> = {
-  "Main Course": "category-gradient-main",
-  Dessert: "category-gradient-dessert",
-  Beverage: "category-gradient-beverage",
-  Snacks: "category-gradient-snacks",
-};
-
-const CATEGORY_EMOJIS: Record<string, string> = {
-  "Main Course": "🍜",
-  Dessert: "🥮",
-  Beverage: "🍵",
-  Snacks: "🥟",
-};
-
-const isTVMode = () => {
+const isTVMode = (): boolean => {
   const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.get('view') === 'tv';
+  return urlParams.get("view") === "tv";
 };
 
 const Index = () => {
-  const [selectedLevel, setSelectedLevel] = useState<string>(() => {
+  const [selectedLevel, setSelectedLevel] = useState<CanteenLevel>(() => {
     // On mount, read from localStorage, default to "Level 1"
-    const saved = localStorage.getItem("canteen_currentLevel");
-    return saved && LEVELS.includes(saved) ? saved : "Level 1";
+    const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_LEVEL);
+    return (saved && LEVELS.includes(saved as CanteenLevel) ? saved : DEFAULT_LEVEL) as CanteenLevel;
   });
   const [isTV, setIsTV] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -48,10 +42,10 @@ const Index = () => {
   const [error, setError] = useState<Error | null>(null);
 
   // Handle level change with localStorage persistence
-  const handleLevelChange = (level: string) => {
+  const handleLevelChange = useCallback((level: CanteenLevel) => {
     setSelectedLevel(level);
-    localStorage.setItem("canteen_currentLevel", level);
-  };
+    localStorage.setItem(STORAGE_KEYS.CURRENT_LEVEL, level);
+  }, []);
 
   useEffect(() => {
     setIsTV(isTVMode());

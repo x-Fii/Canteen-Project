@@ -1,9 +1,8 @@
-import { useState } from "react";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { secondaryAuth, secondaryDb, UserRole } from "@/lib/firebase-new";
+import React, { useState } from "react";
+import { UserRole, createUserCallable } from "@/lib/firebase-new";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 
 interface CreateUserModalProps {
   isOpen: boolean;
@@ -11,49 +10,74 @@ interface CreateUserModalProps {
   onSuccess: () => void;
 }
 
-export function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUserModalProps) {
+// Validation schema for new user
+const createUserSchema = z.object({
+  email: z.string()
+    .trim()
+    .min(1, "Email is required")
+    .email("Invalid email format")
+    .toLowerCase(),
+  password: z.string()
+    .min(8, "Password must be at least 8 characters")
+    .max(100, "Password must be less than 100 characters")
+    .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+    .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+    .regex(/[0-9]/, "Password must contain at least one number"),
+  role: z.enum(["admin", "content_manager"]),
+});
+
+export function CreateUserModal({ isOpen, onClose, onSuccess }: CreateUserModalProps): React.ReactElement | null {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("content_manager");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setValidationError(null);
 
     try {
-      // Step 1: Create user with email and password using secondary Firebase app
-      // This doesn't affect the current admin's session
-      const userCredential = await createUserWithEmailAndPassword(
-        secondaryAuth,
+      // Validate input using Zod schema
+      const validated = createUserSchema.parse({
         email,
-        password
-      );
-
-      const uid = userCredential.user.uid;
-
-      // Step 2: Write user data to Firestore users collection
-      // Skip email verification as per requirements
-      await setDoc(doc(secondaryDb, "users", uid), {
-        email,
+        password,
         role,
-        createdAt: serverTimestamp(),
-        uid,
       });
 
-      toast.success(`User created successfully as ${role}!`);
-      
-      // Reset form and close
-      setEmail("");
-      setPassword("");
-      setRole("content_manager");
-      onSuccess();
-      onClose();
+      // Use cloud function to create user with custom claims
+      // This ensures consistency with the rest of the system
+      const result = await createUserCallable({
+        email: validated.email,
+        password: validated.password,
+        role: validated.role,
+      });
+
+      if (result.data.success) {
+        toast.success(`User created successfully as ${result.data.role}!`);
+        
+        // Reset form and close
+        setEmail("");
+        setPassword("");
+        setRole("content_manager");
+        onSuccess();
+        onClose();
+      } else {
+        throw new Error("Failed to create user");
+      }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to create user";
-      console.error("Error creating user:", error);
-      toast.error(errorMessage);
+      if (error instanceof z.ZodError) {
+        const message = error.errors[0]?.message || "Validation error";
+        setValidationError(message);
+        toast.error(message);
+      } else {
+        const errorMessage = error instanceof Error ? error.message : "Failed to create user";
+        console.error("Error creating user:", error);
+        setValidationError(errorMessage);
+        toast.error(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }

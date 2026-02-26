@@ -1,121 +1,219 @@
-# 🍴 Campus Canteen Menu System (Next.js Edition)
+# 🍴 Campus Canteen Menu System
 
-A modern, responsive CRUD (Create, Read, Update, Delete) application for managing and displaying canteen menus across multiple levels.
+A modern, responsive CRUD application for managing and displaying canteen menus across multiple levels. Built with **Vite**, **React**, **TypeScript**, and **Firebase Firestore**.
 
-## 🏗️ The Tech Stack
+---
+
+## 🏗️ Tech Stack
 
 | Component | Technology | Why? |
-| --- | --- | --- |
-| **Framework** | **Next.js 14+ (App Router)** | Provides Server Components for speed and Client Components for interactivity. |
-| **Styling** | **Tailwind CSS** | Utility-first CSS for rapid, responsive UI development. |
-| **Database** | **SQLite** | A lightweight, file-based database (similar to your PHP version). |
-| **ORM** | **Prisma** | A type-safe way to interact with your database without writing raw SQL. |
-| **Language** | **TypeScript** | Adds static typing to JavaScript to catch bugs early. |
+| --------- | ---------- | ----- |
+| **Build Tool** | **Vite** | Fast bundling with HMR for smooth development |
+| **Framework** | **React 18+** | Component-based UI with efficient rendering |
+| **Language** | **TypeScript** | Type safety and better developer experience |
+| **Styling** | **Tailwind CSS** | Utility-first CSS for rapid UI development |
+| **UI Components** | **shadcn/ui** | Accessible, customizable components built on Radix UI |
+| **Database** | **Firebase Firestore** | Serverless NoSQL with real-time sync |
+| **Authentication** | **Firebase Auth** | Secure user authentication |
+| **Backend Logic** | **Firebase Cloud Functions** | Server-side user management |
+| **State Management** | **TanStack React Query** | Efficient server state caching |
+| **Validation** | **Zod** | Schema validation with TypeScript support |
 
 ---
 
 ## 📂 Project Structure
 
-```text
-canteen-app/
-├── prisma/
-│   └── schema.prisma    <-- Database definition
+```
+canteen-project/
+├── functions/                 # Firebase Cloud Functions
+│   └── src/
+│       ├── index.ts           # Function exports
+│       └── admin.ts           # Admin-only functions
+├── public/                     # Static assets
+│   ├── icons/                 # PWA icons
+│   └── manifest.json          # PWA manifest
 ├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   │   └── menu/
-│   │   │       └── route.ts  <-- Backend logic (GET, POST, PUT, DELETE)
-│   │   ├── admin/
-│   │   │   └── page.tsx      <-- Admin dashboard (CRUD UI)
-│   │   └── page.tsx          <-- Public menu display
-│   └── lib/
-│       └── prisma.ts         <-- Database connection client
-└── .env                      <-- Environment variables
-
+│   ├── components/
+│   │   └── ui/                # shadcn-ui components (50+)
+│   ├── hooks/                 # Custom React hooks
+│   ├── lib/
+│   │   ├── firebase-new.ts    # Firebase config & hooks
+│   │   ├── constants.ts      # App constants
+│   │   ├── schemas.ts        # Zod validation schemas
+│   │   └── utils.ts           # Utility functions
+│   ├── pages/
+│   │   ├── Index.tsx          # Public menu display
+│   │   ├── Admin.tsx          # Admin panel
+│   │   └── NotFound.tsx       # 404 page
+│   ├── test/                  # Vitest tests
+│   ├── App.tsx                # Main app with routing
+│   └── main.tsx               # Entry point
+├── .env                       # Environment variables
+├── firebase.json              # Firebase config
+├── tailwind.config.ts         # Tailwind config
+├── vite.config.ts             # Vite config
+└── package.json               # Dependencies
 ```
 
 ---
 
 ## 🛠️ Implementation Details
 
-### 1. The Database (Prisma)
+### 1. Firebase Firestore Schema
 
-Instead of manually writing `CREATE TABLE`, we use a Prisma schema. This automatically generates a "Client" you can use to query data in your code.
-
-```prisma
-// prisma/schema.prisma
-model MenuItem {
-  id           Int      @id @default(autoincrement())
-  name         String
-  price        Float
-  category     String   // Main Course, Dessert, etc.
-  canteenLevel String   // Level 1, Level 2, Level 3
-  createdAt    DateTime @default(now())
+**menu_items collection:**
+```
+typescript
+interface MenuItem {
+  id: string;
+  name: string;           // Food name
+  price: number;          // Price in RM
+  category: string;       // "Main Course" | "Dessert" | "Beverage" | "Snacks"
+  canteen_level: string; // "Level 1" | "Level 2" | "Level 3"
+  created_at: unknown;   // Firestore timestamp
 }
-
 ```
 
-### 2. The API Route (Backend)
+**users collection:**
+```
+typescript
+interface UserDoc {
+  uid: string;
+  email: string;
+  role: "admin" | "content_manager";
+  createdAt: unknown;
+  lastSignInAt?: unknown;
+}
+```
 
-In Next.js, your backend logic lives in `route.ts`. It replaces the `if ($_SERVER['REQUEST_METHOD'] === 'POST')` logic from PHP.
+### 2. React + shadcn-ui Usage
 
-* **GET:** Fetches menu items (filtered by level for the public site).
-* **POST:** Adds a new food item.
-* **PUT:** Updates an existing item.
-* **DELETE:** Removes an item.
+- **Dialog** for create/edit modals
+- **Toast/Sonner** for notifications
+- **Table** for admin menu listing
+- **Select** for category/level dropdowns
+- **Form** with react-hook-form + Zod validation
 
-### 3. The Admin Panel (React)
+### 3. Dynamic Filtering
 
-The new Admin Panel uses **React State**.
+```
+typescript
+// Real-time filtering by canteen level
+const q = query(
+  collection(db, "menu_items"),
+  where("canteen_level", "==", selectedLevel),
+  orderBy("category"),
+  orderBy("name")
+);
 
-* **No Refreshes:** When you add or delete an item, the list updates instantly using `fetch()` and `useState`.
-* **Unified Form:** One form handles both adding and editing by switching between "Create" and "Update" modes dynamically.
-
-### 4. The Public Site
-
-* **Dynamic Filtering:** Clicking "Level 1" or "Level 2" updates the menu items immediately without a browser reload.
-* **Responsive Grid:** Uses Tailwind’s `grid-cols-1 md:grid-cols-2 lg:grid-cols-4` to look perfect on phones, tablets, and desktops.
+const unsubscribe = onSnapshot(q, (snapshot) => {
+  // Real-time updates when data changes
+});
+```
 
 ---
 
-## 🚀 How to Setup
+## 🚀 Getting Started
 
-1. **Initialize Project:**
-```bash
-npx create-next-app@latest canteen-app --typescript --tailwind --eslint
-cd canteen-app
+### 1. Clone the Project
 
 ```
-
-
-2. **Add Prisma (Database Tool):**
-```bash
-npm install prisma @prisma/client
-npx prisma init --datasource-provider sqlite
-
+bash
+git clone <your-repo-url>
+cd canteen-project
 ```
 
-
-3. **Sync Database:**
-After creating your `schema.prisma`, run:
-```bash
-npx prisma migrate dev --name init
+### 2. Install Dependencies
 
 ```
+bash
+npm install
+```
 
+### 3. Configure Firebase
 
-4. **Run Development Server:**
-```bash
+Create a `.env` file in the root directory:
+
+```
+env
+# Firebase Config
+VITE_FIREBASE_API_KEY=your_api_key
+VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your_project_id
+VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
+VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+```
+
+### 4. Set Up Firestore Rules
+
+```
+javascript
+// firestore.rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /menu_items/{item} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.role in ['admin', 'content_manager'];
+    }
+    
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.token.role == 'admin';
+      allow write: if request.auth != null && request.auth.token.role == 'admin';
+    }
+  }
+}
+```
+
+### 5. Run Development Server
+
+```
+bash
 npm run dev
-
 ```
 
-
+The app will be available at `http://localhost:5173`
 
 ---
 
-## 💡 Key Differences from your PHP Code
+## 💡 Key Features
 
-1. **Client vs Server:** In PHP, the server generates the HTML and sends it. In Next.js, the server sends the data (JSON), and React builds the HTML on the user's screen.
-2. **Routing:** Instead of `admin.php?edit=5`, Next.js uses clean folder-based routing and internal state management.
-3. **Security:** Prisma automatically protects you from **SQL Injection**, which was a manual concern in raw PHP/PDO.
+- **📱 Responsive Design** - Works on mobile, tablet, and desktop
+- **⚡ Real-time Updates** - Menu changes reflect instantly via Firestore listeners
+- **🔐 Role-based Access** - Admin and Content Manager roles
+- **🌙 Offline Support** - Shows offline indicator when connection lost
+- **📺 TV Mode** - Add `?view=tv` to URL for TV display
+- ** Testing🧪** - Vitest setup with React Testing Library
+
+---
+
+## 📝 Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start dev server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview production build |
+| `npm run lint` | Run ESLint |
+| `npm run test` | Run tests |
+| `npm run test:watch` | Run tests in watch mode |
+
+---
+
+## 🔧 Tech Stack Exclusions
+
+This project **does NOT** use:
+- ~~Next.js~~
+- ~~Prisma~~
+- ~~SQLite~~
+- ~~Any other backend framework~~
+
+The backend logic is handled entirely by **Firebase Cloud Functions** for user management operations.
+
+---
+
+## 📄 License
+
+MIT License - Feel free to use this project for your own canteen management system.

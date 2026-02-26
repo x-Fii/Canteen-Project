@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { 
   db, 
   auth, 
+  USERS_COLLECTION,
   MENU_ITEMS_COLLECTION, 
   getUserRole, 
   UserRole, 
@@ -191,6 +192,22 @@ const Admin = () => {
   const [showNewUserPassword, setShowNewUserPassword] = useState(false);
 
   // ====================
+  // Update lastSignIn in Firestore (client-side)
+  // ====================
+  const updateLastSignIn = async (uid: string) => {
+    try {
+      const userDocRef = doc(db, USERS_COLLECTION, uid);
+      await updateDoc(userDocRef, {
+        lastSignInAt: serverTimestamp(),
+        lastSignIn: new Date().toISOString(),
+      });
+      console.log("[Auth] Updated lastSignIn in Firestore");
+    } catch (error) {
+      console.warn("[Auth] Could not update lastSignIn:", error);
+    }
+  };
+
+  // ====================
   // Auth State Listener
   // ====================
   useEffect(() => {
@@ -205,6 +222,9 @@ const Admin = () => {
           if (bootstrapResult.isBootstrap) {
             toast.success("Welcome! Your admin profile has been created.");
           }
+          
+          // Update lastSignIn in Firestore (client-side)
+          await updateLastSignIn(user.uid);
         } catch (error) {
           console.error("Bootstrap error:", error);
         }
@@ -1016,7 +1036,11 @@ const Admin = () => {
                           </span>
                         </td>
                         <td className="px-5 py-4 text-foreground">{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "N/A"}</td>
-                        <td className="px-5 py-4 text-foreground">{u.lastSignIn ? new Date(u.lastSignIn).toLocaleDateString() : "Never"}</td>
+                        <td className="px-5 py-4 text-foreground">
+                          {u.lastSignIn && u.lastSignIn !== "" 
+                            ? new Date(u.lastSignIn).toLocaleDateString() 
+                            : "Never"}
+                        </td>
                         <td className="px-5 py-4">
                           <div className="flex gap-2">
                             {u.role !== "admin" && (

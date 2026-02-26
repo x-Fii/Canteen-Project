@@ -42,6 +42,7 @@ export interface UserDocData {
   role: UserRole;
   createdAt: unknown;
   uid: string;
+  lastSignInAt?: unknown;
 }
 
 /**
@@ -212,10 +213,20 @@ export interface GetUsersResult {
     role: string;
     createdAt: string;
     lastSignIn: string;
+    lastSignInAt?: string;
   }>;
 }
 
 export const getUsersCallable = httpsCallable<void, GetUsersResult>(functions, "getUsersCallable");
+
+// Callable to update lastSignInAt in Firestore (syncs from Auth)
+export interface UpdateLastSignInResult {
+  success: boolean;
+  lastSignInAt?: string;
+  error?: string;
+}
+
+export const updateLastSignInCallable = httpsCallable<void, UpdateLastSignInResult>(functions, "updateLastSignIn");
 
 export interface UpdateUserRoleData {
   uid: string;
@@ -265,12 +276,14 @@ export const bootstrapAdminUser = async (): Promise<{ success: boolean; message:
     const role = claims.role || "content_manager";
 
     // Create user document in Firestore (bootstrap)
+    // Note: Removed bootstrappedAt - using createdAt instead
     await setDoc(userDocRef, {
       email: auth.currentUser.email,
       role: role,
       createdAt: serverTimestamp(),
       uid: userId,
-      bootstrappedAt: serverTimestamp(),
+      // Initialize lastSignInAt - will be updated on login
+      lastSignInAt: null,
     });
 
     console.log(`[Bootstrap] Created user document for ${auth.currentUser.email} with role: ${role}`);
@@ -313,6 +326,11 @@ export const fetchAllUsers = (
 
       const users: UserData[] = snapshot.docs.map((doc) => {
         const data = doc.data();
+        // Handle null, undefined, or empty string for lastSignIn
+        // Also check lastSignInAt (new field name)
+        const lastSignInValue = data.lastSignIn || data.lastSignInAt;
+        const lastSignIn = (lastSignInValue && lastSignInValue !== "") ? lastSignInValue : "";
+        
         return {
           uid: doc.id,
           email: data.email || null,
@@ -320,7 +338,7 @@ export const fetchAllUsers = (
           createdAt: data.createdAt 
             ? (data.createdAt instanceof Date ? data.createdAt.toISOString() : new Date().toISOString())
             : new Date().toISOString(),
-          lastSignIn: data.lastSignIn || "Never",
+          lastSignIn: lastSignIn,
         };
       });
 
@@ -371,6 +389,11 @@ export const fetchAllUsersOnce = async (): Promise<{
 
     const users: UserData[] = snapshot.docs.map((doc) => {
       const data = doc.data();
+      // Handle null, undefined, or empty string for lastSignIn
+      // Also check lastSignInAt (new field name)
+      const lastSignInValue = data.lastSignIn || data.lastSignInAt;
+      const lastSignIn = (lastSignInValue && lastSignInValue !== "") ? lastSignInValue : "";
+      
       return {
         uid: doc.id,
         email: data.email || null,
@@ -378,7 +401,7 @@ export const fetchAllUsersOnce = async (): Promise<{
         createdAt: data.createdAt 
           ? (data.createdAt instanceof Date ? data.createdAt.toISOString() : new Date().toISOString())
           : new Date().toISOString(),
-        lastSignIn: data.lastSignIn || "Never",
+        lastSignIn: lastSignIn,
       };
     });
 

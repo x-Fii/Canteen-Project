@@ -10,7 +10,9 @@
 import {setGlobalOptions} from "firebase-functions";
 import {onCall} from "firebase-functions/v2/https";
 import * as logger from "firebase-functions/logger";
-import { createUser, deleteUser, getUsers, updateUserRole, verifyAdmin } from "./admin";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
+import { createUser, deleteUser, getUsers, updateUserRole, verifyAdmin, initializeAdmin } from "./admin";
 
 // For cost control, you can set the maximum number of containers that can be
 // running at the same time. This helps mitigate the impact of unexpected
@@ -155,5 +157,76 @@ export const updateUserRoleCallable = onCall(
     });
 
     return await updateUserRole(uid, role, request.auth.uid);
+  }
+);
+
+// ============================================
+// Auth - Update lastSignInAt on Login (Callable)
+// ============================================
+
+/**
+ * Callable Function: Update lastSignInAt in Firestore
+ * 
+ * This is called from the client after successful login to sync
+ * the Auth lastSignInTime to Firestore lastSignInAt field.
+ * 
+ * This provides:
+ * - Real-time updates for Admin dashboard
+ * - Redundant storage for querying/sorting
+ * - Immediate reflection of login time
+ * 
+ * Note: Firebase Auth already tracks metadata.lastSignInTime automatically.
+ * This function syncs it to Firestore for dashboard display.
+ * 
+ * Usage from client:
+ * const updateLastSignIn = httpsCallable(functions, 'updateLastSignIn');
+ * await updateLastSignIn();
+ */
+export const updateLastSignIn = onCall(
+  { cors: ["http://localhost:5173", "https://your-project.firebaseapp.com"] },
+  async (request) => {
+    // Check if the caller is authenticated
+    if (!request.auth) {
+      throw new Error("Unauthorized: Authentication required");
+    }
+
+    const uid = request.auth.uid;
+
+    try {
+      // Initialize admin and get instances
+      const { auth, db } = initializeAdmin();
+
+      // Get the user from Auth to get the latest lastSignInTime
+      const userRecord = await auth.getUser(uid);
+      const lastSignInTime = userRecord.metadata.lastSignInTime;
+
+      // Parse the timestamp (Auth returns ISO string)
+      const lastSignInAt = lastSignInTime ? new Date(lastSignInTime) : new Date();
+
+      // Update Firestore document
+      await db.collection("users").doc(uid).set(
+        {
+          lastSignInAt: lastSignInAt,
+          lastSignIn: lastSignInAt.toISOString(), // Keep for backward compatibility
+        },
+        { merge: true }
+      );
+
+      logger.info(`Updated lastSignInAt for user ${uid}`, {
+        lastSignInAt: lastSignInAt.toISOString(),
+      });
+
+      return {
+        success: true,
+        lastSignInAt: lastSignInAt.toISOString(),
+      };
+    } catch (error) {
+      logger.error("Error updating lastSignInAt:", error);
+      // Don't throw - this is a non-critical update
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
   }
 );

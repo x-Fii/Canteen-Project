@@ -3,7 +3,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
 // Initialize Firebase Admin
-const initializeAdmin = () => {
+export const initializeAdmin = () => {
   if (getApps().length === 0) {
     // Use service account from environment variables
     // In production, you'd use Firebase Admin SDK with service account
@@ -146,12 +146,16 @@ export const getUsers = async () => {
       const firestoreData = firestoreUsers[user.uid] || {};
       const customClaims = user.customClaims as { role?: string } | undefined;
       
+      // Handle null or empty lastSignInTime
+      const lastSignInTime = user.metadata.lastSignInTime;
+      const lastSignIn = lastSignInTime && lastSignInTime !== "" ? lastSignInTime : "";
+      
       return {
         uid: user.uid,
         email: user.email,
         role: customClaims?.role || firestoreData.role || "content_manager",
         createdAt: user.metadata.creationTime,
-        lastSignIn: user.metadata.lastSignInTime,
+        lastSignIn: lastSignIn,
       };
     });
 
