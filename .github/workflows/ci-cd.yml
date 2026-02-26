@@ -98,11 +98,9 @@ jobs:
       # 5. Authenticate with Service Account
       - name: Authenticate Firebase
         run: |
-          echo "${{ secrets.GCP_SA_KEY }}" > service-account.json
+          echo "${{ secrets.GCP_SA_KEY }}" | base64 -d > service-account.json
           export GOOGLE_APPLICATION_CREDENTIALS=service-account.json
           firebase projects:list
-        env:
-          GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
 
       # 6. Deploy Hosting
       - name: Deploy to Firebase Hosting
