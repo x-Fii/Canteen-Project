@@ -1,25 +1,20 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { db, MENU_ITEMS_COLLECTION } from "@/lib/firebase-new";
-import { collection, query, where, orderBy, onSnapshot, type DocumentData } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { Link } from "react-router-dom";
 import {
-  LEVELS,
   CATEGORIES,
   CATEGORY_GRADIENTS,
   CATEGORY_EMOJIS,
-  DEFAULT_LEVEL,
-  STORAGE_KEYS,
-  type CanteenLevel,
   type MenuCategory,
 } from "@/lib/constants";
-import { logger } from "@/lib/logger";
 
 interface MenuItem {
   id: string;
   name: string;
   price: number;
   category: MenuCategory;
-  canteen_level: CanteenLevel;
+  canteen_level: string;
   created_at: string;
 }
 
@@ -28,12 +23,7 @@ const isTVMode = (): boolean => {
   return urlParams.get("view") === "tv";
 };
 
-const Index = () => {
-  const [selectedLevel, setSelectedLevel] = useState<CanteenLevel>(() => {
-    // On mount, read from localStorage, default to "Level 1"
-    const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_LEVEL);
-    return (saved && LEVELS.includes(saved as CanteenLevel) ? saved : DEFAULT_LEVEL) as CanteenLevel;
-  });
+const FloorThree = () => {
   const [isTV, setIsTV] = useState(false);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [items, setItems] = useState<MenuItem[]>([]);
@@ -41,11 +31,7 @@ const Index = () => {
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  // Handle level change with localStorage persistence
-  const handleLevelChange = useCallback((level: CanteenLevel) => {
-    setSelectedLevel(level);
-    localStorage.setItem(STORAGE_KEYS.CURRENT_LEVEL, level);
-  }, []);
+  const FLOOR_LEVEL = "Level 3";
 
   useEffect(() => {
     setIsTV(isTVMode());
@@ -69,7 +55,7 @@ const Index = () => {
 
     const q = query(
       collection(db, MENU_ITEMS_COLLECTION),
-      where("canteen_level", "==", selectedLevel),
+      where("canteen_level", "==", FLOOR_LEVEL),
       orderBy("category"),
       orderBy("name")
     );
@@ -93,7 +79,7 @@ const Index = () => {
     );
 
     return () => unsubscribe();
-  }, [selectedLevel]);
+  }, []);
 
   // Memoize menuByCategory to avoid recalculating on every render
   const menuByCategory = useMemo(() => {
@@ -160,12 +146,14 @@ const Index = () => {
               Campus Canteen
             </span>
           </div>
-          <Link
-            to="/admin"
-            className="text-primary-foreground/70 hover:text-primary-foreground text-sm transition-colors border border-primary-foreground/30 px-3 py-1 rounded"
-          >
-            Admin Login
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link
+              to="/admin"
+              className="text-primary-foreground/70 hover:text-primary-foreground text-sm transition-colors border border-primary-foreground/30 px-3 py-1 rounded"
+            >
+              Admin Login
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -176,35 +164,11 @@ const Index = () => {
         </p>
       </div>
 
-      {/* Level Selection */}
-      <div className="bg-card border-b-2 border-accent/20">
-        <div className="container mx-auto px-6 py-5">
-          <h2 className="text-muted-foreground text-xs font-bold uppercase mb-3 tracking-widest font-display">
-            选择楼层 · Select Level
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {LEVELS.map((lvl) => (
-              <button
-                key={lvl}
-onClick={() => handleLevelChange(lvl)}
-                className={`px-6 py-2.5 rounded text-sm font-semibold transition-all duration-300 border-2 ${
-                  selectedLevel === lvl
-                    ? "bg-primary text-primary-foreground border-primary lantern-shadow"
-                    : "border-primary/30 text-primary hover:bg-primary/10 hover:border-primary/50"
-                }`}
-              >
-                {lvl}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Menu */}
       <main className="flex-1 container mx-auto px-6 py-10">
         <div className="text-center mb-10">
           <h3 className="font-display text-3xl font-bold text-foreground mb-2">
-            {selectedLevel} · 菜单
+            {FLOOR_LEVEL} · 菜单
           </h3>
           <div className="flex items-center justify-center gap-3">
             <span className="h-px w-16 bg-accent/50" />
@@ -233,7 +197,6 @@ onClick={() => handleLevelChange(lvl)}
                 className="bg-card rounded-lg overflow-hidden lantern-shadow hover:scale-[1.02] transition-transform duration-300 border-2 border-accent/20"
               >
                 <div className={`${CATEGORY_GRADIENTS[category]} p-4 relative`}>
-                  <div className="absolute inset-0 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMiIgZmlsbD0id2hpdGUiLz48L3N2Zz4=')]" />
                   <h4 className="text-primary-foreground font-display font-bold text-lg text-center uppercase tracking-wider flex items-center justify-center gap-2 relative z-10">
                     <span className="text-2xl">{CATEGORY_EMOJIS[category]}</span>
                     {category}
@@ -285,4 +248,4 @@ onClick={() => handleLevelChange(lvl)}
   );
 };
 
-export default Index;
+export default FloorThree;

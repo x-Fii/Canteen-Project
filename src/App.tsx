@@ -3,11 +3,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Lazy load route components for code splitting
-const Index = lazy(() => import("./pages/Index"));
+const FloorOne = lazy(() => import("./pages/FloorOne"));
+const FloorTwo = lazy(() => import("./pages/FloorTwo"));
+const FloorThree = lazy(() => import("./pages/FloorThree"));
 const Admin = lazy(() => import("./pages/Admin"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
@@ -65,7 +67,10 @@ const App = () => {
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/" element={<Index />} />
+                <Route path="/" element={<Navigate to="/floor1" replace />} />
+                <Route path="/floor1" element={<FloorOne />} />
+                <Route path="/floor2" element={<FloorTwo />} />
+                <Route path="/floor3" element={<FloorThree />} />
                 <Route path="/admin" element={<Admin />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
