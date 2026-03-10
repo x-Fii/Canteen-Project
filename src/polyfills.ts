@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // Polyfills for Chromium 70 compatibility
 // Import this file FIRST in main.tsx before any other imports
 
@@ -23,17 +24,19 @@ import "core-js/stable/date";
 
 // Polyfill for Object.assign (missing in older browsers)
 if (typeof Object.assign !== 'function') {
-  Object.assign = function(target: any, ...sources: any[]) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (Object as any).assign = function(target: object, ...sources: unknown[]): object {
     if (target === null || target === undefined) {
       throw new TypeError('Cannot convert undefined or null to object');
     }
-    const to = Object(target);
+    const to: Record<string, unknown> = Object(target);
     for (let index = 0; index < sources.length; index++) {
       const nextSource = sources[index];
       if (nextSource !== null && nextSource !== undefined) {
-        for (const nextKey in nextSource) {
-          if (Object.prototype.hasOwnProperty.call(nextSource, nextKey)) {
-            to[nextKey] = nextSource[nextKey];
+        const sourceObj = nextSource as Record<string, unknown>;
+        for (const nextKey in sourceObj) {
+          if (Object.prototype.hasOwnProperty.call(sourceObj, nextKey)) {
+            to[nextKey] = sourceObj[nextKey];
           }
         }
       }
@@ -45,7 +48,8 @@ if (typeof Object.assign !== 'function') {
 // Polyfill for Array.prototype.includes
 if (!Array.prototype.includes) {
   Object.defineProperty(Array.prototype, 'includes', {
-    value: function(searchElement: any, fromIndex?: number) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    value: function(searchElement: unknown, fromIndex?: number): boolean {
       const O = Object(this);
       const len = O.length >>> 0;
       if (len === 0) return false;
@@ -62,36 +66,40 @@ if (!Array.prototype.includes) {
 
 // Polyfill for String.prototype.includes
 if (!String.prototype.includes) {
-  String.prototype.includes = function(search: any, position?: number) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  String.prototype.includes = function(search: unknown, position?: number): boolean {
     return String.prototype.indexOf.call(this, search, position) !== -1;
   };
 }
 
 // Polyfill for String.prototype.startsWith
 if (!String.prototype.startsWith) {
-  String.prototype.startsWith = function(search: any, pos?: number) {
-    return this.substr(pos || 0, search.length) === search;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  String.prototype.startsWith = function(search: unknown, pos?: number): boolean {
+    return this.substr(pos || 0, String(search).length) === search;
   };
 }
 
 // Polyfill for String.prototype.endsWith
 if (!String.prototype.endsWith) {
-  String.prototype.endsWith = function(search: any, len?: number) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  String.prototype.endsWith = function(search: unknown, len?: number): boolean {
     if (len === undefined || len > this.length) {
       len = this.length;
     }
-    return this.substring(len - search.length, len) === search;
+    return this.substring(len - String(search).length, len) === search;
   };
 }
 
 // Polyfill for Object.entries
 if (!Object.entries) {
-  Object.entries = function(obj: any) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Object.entries = function(obj: object): [string, unknown][] {
     const ownProps = Object.keys(obj);
     let i = ownProps.length;
-    const resultArray = new Array(i);
+    const resultArray: [string, unknown][] = new Array(i);
     while (i--) {
-      resultArray[i] = [ownProps[i], obj[ownProps[i]]];
+      resultArray[i] = [ownProps[i], (obj as Record<string, unknown>)[ownProps[i]]];
     }
     return resultArray;
   };
@@ -99,12 +107,13 @@ if (!Object.entries) {
 
 // Polyfill for Object.values
 if (!Object.values) {
-  Object.values = function(obj: any) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Object.values = function(obj: object): unknown[] {
     const ownProps = Object.keys(obj);
     let i = ownProps.length;
-    const resultArray = new Array(i);
+    const resultArray: unknown[] = new Array(i);
     while (i--) {
-      resultArray[i] = obj[ownProps[i]];
+      resultArray[i] = (obj as Record<string, unknown>)[ownProps[i]];
     }
     return resultArray;
   };
@@ -112,7 +121,8 @@ if (!Object.values) {
 
 // Polyfill for NodeList.prototype.forEach
 if (typeof NodeList !== 'undefined' && !NodeList.prototype.forEach) {
-  NodeList.prototype.forEach = function(callback: any, thisArg: any) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  NodeList.prototype.forEach = function(callback: (this: unknown, node: Node, index: number, list: NodeList) => void, thisArg?: unknown): void {
     for (let i = 0; i < this.length; i++) {
       callback.call(thisArg, this[i], i, this);
     }
@@ -121,18 +131,20 @@ if (typeof NodeList !== 'undefined' && !NodeList.prototype.forEach) {
 
 // Polyfill for Element.prototype.matches
 if (!Element.prototype.matches) {
-  Element.prototype.matches = (Element.prototype as any).msMatchesSelector || 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (Element.prototype as any).matches = (Element.prototype as any).msMatchesSelector || 
     (Element.prototype as any).webkitMatchesSelector;
 }
 
 // Polyfill for Element.prototype.closest
 if (!Element.prototype.closest) {
-  Element.prototype.closest = function(s: any) {
-    let el = this;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Element.prototype.closest = function(s: string): Element | null {
+    let el: Element | null = this;
     do {
       if (el.matches(s)) return el;
-      el = el.parentElement || el.parentNode;
-    } while (el !== null && el.nodeType === 1);
+      el = el.parentElement;
+    } while (el !== null);
     return null;
   };
 }
