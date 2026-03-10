@@ -31,7 +31,7 @@ const FloorTwo = () => {
   const [isError, setIsError] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const FLOOR_LEVEL = "Level 2";
+  const FLOOR_LEVEL = "Floor 3";
 
   useEffect(() => {
     setIsTV(isTVMode());

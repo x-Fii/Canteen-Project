@@ -67,10 +67,10 @@ const App = () => {
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                <Route path="/" element={<Navigate to="/floor1" replace />} />
-                <Route path="/floor1" element={<FloorOne />} />
-                <Route path="/floor2" element={<FloorTwo />} />
-                <Route path="/floor3" element={<FloorThree />} />
+                <Route path="/" element={<Navigate to="/floor2" replace />} />
+                <Route path="/floor2" element={<FloorOne />} />
+                <Route path="/floor3" element={<FloorTwo />} />
+                <Route path="/floor4" element={<FloorThree />} />
                 <Route path="/admin" element={<Admin />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

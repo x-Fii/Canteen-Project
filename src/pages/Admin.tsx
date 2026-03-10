@@ -44,7 +44,7 @@ import { CreateUserModal } from "@/components/CreateUserModal";
 
 // Constants
 const CATEGORIES = ["Main Course", "Dessert", "Beverage", "Snacks"];
-const LEVELS = ["Level 1", "Level 2", "Level 3"];
+const LEVELS = ["Floor 2", "Floor 3", "Floor 4"];
 
 // ====================
 // Input Validation Schemas
@@ -879,7 +879,7 @@ const Admin = () => {
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="bg-muted/50">
-                  {["Level", "Category", "Name", "Price", "Actions"].map((h) => (
+                  {["Floor", "Category", "Name", "Price", "Actions"].map((h) => (
                     <th
                       key={h}
                       className="px-5 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider"
