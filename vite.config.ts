@@ -100,7 +100,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    target : "chrome55",
+    target : "es2017",
     rollupOptions: {
       output: {
         manualChunks: {
@@ -128,8 +128,12 @@ export default defineConfig(({ mode }) => ({
           ],
           'vendor-firebase': ['firebase', 'firebase/firestore', 'firebase/auth'],
           'vendor-query': ['@tanstack/react-query'],
+          'vendor-polyfills': ['core-js'],
         },
       },
     },
+  },
+  optimizeDeps: {
+    include: ['core-js'],
   },
 }));

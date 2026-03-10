@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
     "types": ["vitest/globals"],
-    "target": "ES2020",
+    "target": "ES2017",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": ["ES2017", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
 
@@ -15,12 +15,15 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-    /* Linting */
+    /* Linting - for older browser compatibility */
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noImplicitAny": false,
     "noFallthroughCasesInSwitch": false,
+
+    /* Disable modern syntax that breaks in older browsers */
+    "downlevelIteration": true,
 
     "baseUrl": ".",
     "paths": {
@@ -29,3 +32,4 @@
   },
   "include": ["src"]
 }
+
