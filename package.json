@@ -13,11 +13,11 @@
     "test:watch": "vitest"
   },
   "browserslist": [
-    "Chrome >= 87",
-    "ChromeAndroid >= 87",
-    "Firefox >= 78",
-    "Edge >= 88",
-    "Safari >= 14",
+    "Chrome >= 70",
+    "ChromeAndroid >= 70",
+    "Firefox >= 65",
+    "Edge >= 79",
+    "Safari >= 12",
     "not dead"
   ],
 "dependencies": {
