@@ -24,7 +24,6 @@ import "core-js/stable/date";
 
 // Polyfill for Object.assign (missing in older browsers)
 if (typeof Object.assign !== 'function') {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (Object as any).assign = function(target: object, ...sources: unknown[]): object {
     if (target === null || target === undefined) {
       throw new TypeError('Cannot convert undefined or null to object');
@@ -48,7 +47,6 @@ if (typeof Object.assign !== 'function') {
 // Polyfill for Array.prototype.includes
 if (!Array.prototype.includes) {
   Object.defineProperty(Array.prototype, 'includes', {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     value: function(searchElement: unknown, fromIndex?: number): boolean {
       const O = Object(this);
       const len = O.length >>> 0;
@@ -66,7 +64,6 @@ if (!Array.prototype.includes) {
 
 // Polyfill for String.prototype.includes
 if (!String.prototype.includes) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   String.prototype.includes = function(search: unknown, position?: number): boolean {
     return String.prototype.indexOf.call(this, search, position) !== -1;
   };
@@ -74,7 +71,6 @@ if (!String.prototype.includes) {
 
 // Polyfill for String.prototype.startsWith
 if (!String.prototype.startsWith) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   String.prototype.startsWith = function(search: unknown, pos?: number): boolean {
     return this.substr(pos || 0, String(search).length) === search;
   };
@@ -82,7 +78,6 @@ if (!String.prototype.startsWith) {
 
 // Polyfill for String.prototype.endsWith
 if (!String.prototype.endsWith) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   String.prototype.endsWith = function(search: unknown, len?: number): boolean {
     if (len === undefined || len > this.length) {
       len = this.length;
@@ -93,7 +88,6 @@ if (!String.prototype.endsWith) {
 
 // Polyfill for Object.entries
 if (!Object.entries) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Object.entries = function(obj: object): [string, unknown][] {
     const ownProps = Object.keys(obj);
     let i = ownProps.length;
@@ -107,7 +101,6 @@ if (!Object.entries) {
 
 // Polyfill for Object.values
 if (!Object.values) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Object.values = function(obj: object): unknown[] {
     const ownProps = Object.keys(obj);
     let i = ownProps.length;
@@ -121,7 +114,6 @@ if (!Object.values) {
 
 // Polyfill for NodeList.prototype.forEach
 if (typeof NodeList !== 'undefined' && !NodeList.prototype.forEach) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   NodeList.prototype.forEach = function(callback: (this: unknown, node: Node, index: number, list: NodeList) => void, thisArg?: unknown): void {
     for (let i = 0; i < this.length; i++) {
       callback.call(thisArg, this[i], i, this);
@@ -131,15 +123,14 @@ if (typeof NodeList !== 'undefined' && !NodeList.prototype.forEach) {
 
 // Polyfill for Element.prototype.matches
 if (!Element.prototype.matches) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (Element.prototype as any).matches = (Element.prototype as any).msMatchesSelector || 
     (Element.prototype as any).webkitMatchesSelector;
 }
 
 // Polyfill for Element.prototype.closest
 if (!Element.prototype.closest) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   Element.prototype.closest = function(s: string): Element | null {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     let el: Element | null = this;
     do {
       if (el.matches(s)) return el;
@@ -148,5 +139,4 @@ if (!Element.prototype.closest) {
     return null;
   };
 }
-
 
