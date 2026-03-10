@@ -12,7 +12,17 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "dependencies": {
+  "browserslist": [
+    "Chrome >= 87",
+    "ChromeAndroid >= 87",
+    "Firefox >= 78",
+    "Edge >= 88",
+    "Safari >= 14",
+    "not dead"
+  ],
+"dependencies": {
+    "core-js": "^3.40.0",
+    "whatwg-fetch": "^3.6.20",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -65,6 +75,10 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/preset-env": "^7.26.0",
+    "@babel/preset-react": "^7.26.0",
+    "@babel/preset-typescript": "^7.26.0",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.6.0",
