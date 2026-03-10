@@ -100,7 +100,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    target : "chrome87",
+    target : "chrome55",
     rollupOptions: {
       output: {
         manualChunks: {
