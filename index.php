@@ -12,24 +12,25 @@ try {
     die("Database connection failed: " . $e->getMessage());
 }
 
-// Get current day for dynamic filtering
-$currentDay = date('l'); // This will return 'Wednesday', 'Thursday', etc.
+// Get current day for dynamic filtering - Wednesday, March 11, 2026
+$currentDay = date('l'); // This returns 'Wednesday'
 
 // Get selected level from query parameter (default to 2)
 $canteenLevel = isset($_GET['level']) ? (int)$_GET['level'] : 2;
 
-// SQL query with dynamic day-based filtering
+// SQL query with dynamic Wednesday filtering
+// Fetch items where day_to_display is 'Wednesday' OR 'Daily' and is_available is true
 $sql = "SELECT * FROM menu_items 
-        WHERE (day_to_display = :currentDay OR day_to_display = 'Daily') 
+        WHERE (day_to_display = ? OR day_to_display = 'Daily') 
         AND is_available = 1 
-        AND canteen_level = :canteenLevel
+        AND canteen_level = ?
         ORDER BY category, name";
 $stmt = $pdo->prepare($sql);
-$stmt->execute(['currentDay' => $currentDay, 'canteenLevel' => $canteenLevel]);
+$stmt->execute([$currentDay, $canteenLevel]);
 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get current date for display
-$currentDate = date('l, M d');
+$currentDate = date('l, M d, Y');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -39,14 +40,20 @@ $currentDate = date('l, M d');
     <title>Canteen Menu System - Level <?php echo $canteenLevel; ?></title>
     <style>
 /**
- * Canteen System Styles
+ * Chinese Style Portrait Signage - Canteen System
  * 
- * Mimics the shadcn/ui aesthetic: Inter font, clean borders, minimal gray/white palette,
- * and responsive mobile-first layouts.
+ * Theme: Deep Imperial Red (#8B0000), Pale Gold/Cream (#FFF8DC), Gold Accents (#D4AF37)
+ * Dimensions: 1080x1920 Portrait
+ * Compatible with Chromium 87 - No external resources
  */
 
-/* Import Noto Sans SC and Noto Serif SC fonts */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+/* Font face - Using system fonts for Chromium 87 compatibility */
+@font-face {
+    font-family: 'Inter';
+    src: local('Inter'), local('Inter-Regular'), local('Arial'), local('Helvetica');
+    font-weight: normal;
+    font-style: normal;
+}
 
 /* Reset and base styles */
 * {
@@ -56,806 +63,427 @@ $currentDate = date('l, M d');
 }
 
 :root {
-    /* Color palette - exact HSL values from the React version */
-    --background: hsl(40 30% 96%);
-    --foreground: hsl(0 15% 12%);
+    /* Chinese Aesthetic Color Palette */
+    --imperial-red: #8B0000;
+    --imperial-red-dark: #5a0000;
+    --cream: #FFF8DC;
+    --cream-light: #FFFEF5;
+    --gold: #D4AF37;
+    --gold-light: #E8D48B;
+    --gold-dark: #B8962E;
+    --dark-brown: #3D2914;
+    --brown: #5D4D35;
+    --brown-light: #8F7751;
     
-    --card: hsl(45 40% 97%);
-    --card-foreground: hsl(0 15% 12%);
-    
-    --popover: hsl(45 40% 97%);
-    --popover-foreground: hsl(0 15% 12%);
-    
-    --primary: hsl(0 72% 46%);
-    --primary-foreground: hsl(45 100% 94%);
-    
-    --secondary: hsl(40 50% 92%);
-    --secondary-foreground: hsl(0 15% 12%);
-    
-    --muted: hsl(35 25% 91%);
-    --muted-foreground: hsl(0 8% 42%);
-    
-    --accent: hsl(43 96% 50%);
-    --accent-foreground: hsl(0 15% 12%);
-    
-    --destructive: hsl(0 84% 60%);
-    --destructive-foreground: hsl(0 0% 100%);
-    
-    --border: hsl(35 30% 85%);
-    --input: hsl(35 30% 85%);
-    --ring: hsl(0 72% 46%);
-    
-    --radius: 0.5rem;
-    
-    --sidebar-background: hsl(0 0% 98%);
-    --sidebar-foreground: hsl(240 5.3% 26.1%);
-    --sidebar-primary: hsl(0 72% 46%);
-    --sidebar-primary-foreground: hsl(45 100% 94%);
-    --sidebar-accent: hsl(40 50% 95%);
-    --sidebar-accent-foreground: hsl(0 15% 12%);
-    --sidebar-border: hsl(35 20% 88%);
-    --sidebar-ring: hsl(0 72% 46%);
-    
-    --category-main: hsl(0 72% 46%);
-    --category-dessert: hsl(340 65% 50%);
-    --category-beverage: hsl(160 45% 38%);
-    --category-snacks: hsl(43 96% 50%);
-    
-    --gold: hsl(43 96% 50%);
-    --gold-light: hsl(43 90% 70%);
-    --crimson: hsl(0 72% 46%);
-    --crimson-dark: hsl(0 72% 32%);
+    /* Additional colors */
+    --white: #FFFFFF;
+    --black: #1a1a1a;
+    --gray-light: #f5f5f5;
+    --gray: #666666;
     
     /* Typography */
-    --font-sans: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    --font-display: 'Noto Serif SC', serif;
+    --font-sans: 'Inter', 'Arial', 'Helvetica', sans-serif;
+    --font-display: 'Georgia', 'Times New Roman', serif;
     
     /* Spacing */
-    --spacing-1: 0.25rem;
-    --spacing-2: 0.5rem;
-    --spacing-3: 0.75rem;
-    --spacing-4: 1rem;
-    --spacing-6: 1.5rem;
-    --spacing-8: 2rem;
-    --spacing-12: 3rem;
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
     
     /* Border radius */
-    --radius-sm: 0.125rem;
-    --radius-md: 0.375rem;
-    --radius-lg: 0.5rem;
-    --radius-full: 9999px;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-full: 50%;
 }
 
-html,
-body {
+/* Portrait Display - Fixed Dimensions */
+html, body {
+    width: 1080px;
+    height: 1920px;
+    overflow: hidden;
     font-family: var(--font-sans);
-    background-color: var(--background);
-    color: var(--foreground);
-    line-height: 1.5;
+    background: var(--cream);
+    color: var(--black);
+    line-height: 1.4;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
 }
 
-/* Layout */
-.container {
+/* Main Container */
+.signage-container {
     width: 100%;
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 2rem;
-}
-
-.main-layout {
+    height: 100%;
     display: flex;
-    min-height: 100vh;
+    flex-direction: column;
+    background: linear-gradient(180deg, var(--cream-light) 0%, var(--cream) 100%);
 }
 
-.sidebar {
-    width: 250px;
-    background-color: var(--sidebar-background);
-    padding: var(--spacing-6);
-    border-right: 1px solid var(--sidebar-border);
-    color: var(--sidebar-foreground);
+/* Header Styles */
+.header {
+    background: linear-gradient(135deg, var(--imperial-red) 0%, var(--imperial-red-dark) 100%);
+    padding: var(--spacing-xl) var(--spacing-2xl);
+    border-bottom: 6px solid var(--gold);
+    box-shadow: 0 4px 20px rgba(139, 0, 0, 0.3);
 }
 
-.content {
-    flex: 1;
-    padding: var(--spacing-6);
-}
-
-/* TV Layout */
-.tv-layout {
-    font-size: 1.5rem;
-    background-color: hsl(0 0% 100%);
-    color: hsl(0 0% 10%);
-    cursor: none;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.tv-layout::-webkit-scrollbar {
-    display: none;
-}
-
-.tv-layout .container {
-    max-width: 1800px;
-}
-
-.tv-layout .sidebar {
-    width: 300px;
-}
-
-.tv-layout .menu-item {
-    padding: var(--spacing-6);
-    margin-bottom: var(--spacing-6);
-}
-
-.tv-layout .item-name {
-    font-size: 2.5rem;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-}
-
-.tv-layout .item-price {
-    font-size: 1.75rem;
-}
-
-.tv-layout .text-2xl { font-size: 2.5rem !important; }
-.tv-layout .text-3xl { font-size: 4rem !important; }
-.tv-layout .text-lg { font-size: 1.5rem !important; }
-.tv-layout .text-sm { font-size: 1.125rem !important; }
-.tv-layout .text-xs { font-size: 1rem !important; }
-
-.tv-layout h1, .tv-layout h2, .tv-layout h3, .tv-layout h4 {
-    font-weight: 700 !important;
-    letter-spacing: 0.05em !important;
-}
-
-.tv-layout button:hover,
-.tv-layout a:hover {
-    transform: none !important;
-    box-shadow: none !important;
-    transition: none !important;
-}
-
-@keyframes tv-scroll {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(-50%); }
-}
-
-.tv-layout .auto-scroll {
-    animation: tv-scroll 60s linear infinite;
-}
-
-.tv-layout .auto-scroll:hover {
-    animation-play-state: paused;
-}
-
-@media (min-width: 1920px) {
-    .tv-layout .container { max-width: 1800px !important; }
-    .tv-layout .grid { grid-template-columns: repeat(2, 1fr) !important; }
-}
-
-/* Typography */
-h1, h2, h3, h4, h5, h6 {
-    font-weight: 600;
-    line-height: 1.2;
-    margin-bottom: var(--spacing-4);
-}
-
-h1 {
-    font-size: 2rem;
-}
-
-h2 {
-    font-size: 1.5rem;
-}
-
-h3 {
-    font-size: 1.25rem;
-}
-
-p {
-    margin-bottom: var(--spacing-4);
-}
-
-/* Navigation */
-.nav-list {
-    list-style: none;
-}
-
-.nav-item {
-    margin-bottom: var(--spacing-2);
-}
-
-.nav-link {
-    display: block;
-    padding: var(--spacing-2) var(--spacing-4);
-    color: var(--sidebar-foreground);
-    text-decoration: none;
-    border-radius: var(--radius);
-    transition: background-color 0.2s;
-}
-
-.nav-link:hover {
-    background-color: var(--sidebar-accent);
-}
-
-.nav-link.active {
-    background-color: var(--sidebar-primary);
-    color: var(--sidebar-primary-foreground);
-}
-
-/* Level filters */
-.level-filters {
-    margin-bottom: var(--spacing-6);
-}
-
-.level-filter {
-    display: inline-block;
-    padding: var(--spacing-2) var(--spacing-4);
-    margin-right: var(--spacing-2);
-    background-color: var(--secondary);
-    color: var(--secondary-foreground);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-}
-
-.level-filter:hover {
-    background-color: var(--accent);
-}
-
-.level-filter.active {
-    background-color: var(--primary);
-    color: var(--primary-foreground);
-    border-color: var(--primary);
-}
-
-/* Menu items */
-.menu-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: var(--spacing-6);
-}
-
-.category-section {
-    margin-bottom: var(--spacing-8);
-}
-
-.category-header {
-    padding-bottom: var(--spacing-2);
-    margin-bottom: var(--spacing-4);
-    border-bottom: 1px solid var(--border);
-}
-
-.items-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: var(--spacing-4);
-}
-
-.menu-item {
-    padding: var(--spacing-4);
-    background-color: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    transition: box-shadow 0.2s, transform 0.2s;
-}
-
-.menu-item:hover {
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    transform: translateY(-2px);
-}
-
-.item-name {
-    margin-bottom: var(--spacing-2);
-}
-
-.item-price {
-    font-weight: 600;
-    color: var(--primary);
-}
-
-.item-description {
-    color: var(--muted-foreground);
-    font-size: 0.875rem;
-    margin-bottom: var(--spacing-2);
-}
-
-.item-category {
-    display: inline-block;
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--radius-sm);
-    font-size: 0.75rem;
-    font-weight: 500;
-    margin-bottom: var(--spacing-2);
-}
-
-.category-main-course {
-    background: linear-gradient(135deg, var(--category-main), var(--crimson-dark));
-    color: var(--primary-foreground);
-}
-
-.category-dessert {
-    background: linear-gradient(135deg, var(--category-dessert), hsl(350 60% 38%));
-    color: var(--primary-foreground);
-}
-
-.category-beverage {
-    background: linear-gradient(135deg, var(--category-beverage), hsl(170 40% 28%));
-    color: var(--primary-foreground);
-}
-
-.category-snacks {
-    background: linear-gradient(135deg, var(--category-snacks), hsl(38 85% 40%));
-    color: var(--accent-foreground);
-}
-
-/* Forms */
-.form-group {
-    margin-bottom: var(--spacing-4);
-}
-
-.form-label {
-    display: block;
-    margin-bottom: var(--spacing-2);
-    font-weight: 500;
-}
-
-.form-input,
-.form-select,
-.form-textarea {
-    width: 100%;
-    padding: var(--spacing-2) var(--spacing-3);
-    background-color: var(--background);
-    border: 1px solid var(--input);
-    border-radius: var(--radius);
-    font-family: var(--font-sans);
-    font-size: 1rem;
-    transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.form-input:focus,
-.form-select:focus,
-.form-textarea:focus {
-    outline: none;
-    border-color: var(--ring);
-    box-shadow: 0 0 0 2px rgba(var(--ring), 0.2);
-}
-
-.form-textarea {
-    min-height: 100px;
-    resize: vertical;
-}
-
-/* Buttons */
-.btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spacing-2) var(--spacing-4);
-    background-color: var(--primary);
-    color: var(--primary-foreground);
-    border: none;
-    border-radius: var(--radius);
-    font-family: var(--font-sans);
-    font-size: 1rem;
-    font-weight: 500;
-    text-align: center;
-    text-decoration: none;
-    cursor: pointer;
-    transition: background-color 0.2s, box-shadow 0.2s, transform 0.1s;
-    user-select: none;
-}
-
-.btn:hover {
-    background-color: var(--primary);
-    opacity: 0.9;
-    transform: translateY(-1px);
-}
-
-.btn:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
-}
-
-.btn:active {
-    transform: translateY(0);
-}
-
-.btn-secondary {
-    background-color: var(--secondary);
-    color: var(--secondary-foreground);
-}
-
-.btn-secondary:hover {
-    background-color: var(--secondary);
-    opacity: 0.9;
-}
-
-.btn-secondary:focus {
-    box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--secondary);
-}
-
-.btn-danger {
-    background-color: var(--destructive);
-    color: var(--destructive-foreground);
-}
-
-.btn-danger:hover {
-    background-color: var(--destructive);
-    opacity: 0.9;
-}
-
-.btn-danger:focus {
-    box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--destructive);
-}
-
-/* Tables */
-.table-container {
-    overflow-x: auto;
-    margin-bottom: var(--spacing-6);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-}
-
-.table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.table th,
-.table td {
-    padding: var(--spacing-3) var(--spacing-4);
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-}
-
-.table th {
-    font-weight: 600;
-    background-color: var(--secondary);
-}
-
-.table tr:hover {
-    background-color: var(--muted);
-}
-
-/* Login form */
-.login-container {
-    max-width: 400px;
-    margin: 100px auto;
-    padding: var(--spacing-6);
-    background-color: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.login-title {
-    text-align: center;
-    margin-bottom: var(--spacing-6);
-}
-
-/* Utilities */
-.text-center {
-    text-align: center;
-}
-
-.mt-4 {
-    margin-top: var(--spacing-4);
-}
-
-.mb-4 {
-    margin-bottom: var(--spacing-4);
-}
-
-.flex {
-    display: flex;
-}
-
-.flex-between {
+.header-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.gap-2 {
-    gap: var(--spacing-2);
+.level-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 180px;
+    height: 180px;
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
+    border-radius: var(--radius-full);
+    border: 8px solid var(--gold-dark);
+    box-shadow: 0 8px 32px rgba(212, 175, 55, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.5);
 }
 
-/* Error message */
-.error-message {
-    padding: var(--spacing-4);
-    background-color: hsl(0 86% 97%);
-    color: hsl(0 72% 42%);
-    border: 1px solid hsl(0 84% 90%);
-    border-radius: var(--radius);
-    margin-bottom: var(--spacing-4);
+.level-text {
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--imperial-red);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Success message */
-.success-message {
-    padding: var(--spacing-4);
-    background-color: hsl(142 76% 95%);
-    color: hsl(142 72% 29%);
-    border: 1px solid hsl(142 76% 87%);
-    border-radius: var(--radius);
-    margin-bottom: var(--spacing-4);
+.time-display {
+    text-align: right;
+    color: var(--white);
 }
 
-/* Chinese-inspired decorative elements */
-.chinese-border {
-    border: 2px solid var(--crimson);
-    box-shadow: inset 0 0 0 3px var(--primary-foreground), inset 0 0 0 5px var(--crimson);
+#timeDisplay {
+    font-size: 4rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    display: block;
+    margin-bottom: var(--spacing-sm);
 }
 
-.gold-text {
-    background: linear-gradient(135deg, var(--gold), var(--gold-light));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.lantern-shadow {
-    box-shadow: 0 8px 32px -8px hsla(0 72% 46% / 0.25), 0 2px 8px hsla(43 96% 50% / 0.1);
-}
-
-/* Toggle switch for TV mode */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 60px;
-    height: 34px;
-}
-
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--muted-foreground);
-    transition: .4s;
-    border-radius: 34px;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 26px;
-    width: 26px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-}
-
-input:checked + .slider {
-    background-color: var(--primary);
-}
-
-input:focus + .slider {
-    box-shadow: 0 0 1px var(--primary);
-}
-
-input:checked + .slider:before {
-    transform: translateX(26px);
-}
-
-.switch-label {
-    margin-left: var(--spacing-4);
+#dateDisplay {
+    font-size: 2rem;
     font-weight: 500;
+    opacity: 0.95;
+    letter-spacing: 0.02em;
 }
 
-/* Hospital Directory Styles */
-.hospital-directory {
+/* Decorative Header Border */
+.header-decoration {
+    height: 12px;
+    background: linear-gradient(90deg, 
+        var(--gold) 0%, 
+        var(--gold-light) 25%, 
+        var(--gold) 50%, 
+        var(--gold-light) 75%, 
+        var(--gold) 100%
+    );
+    border-top: 3px solid var(--gold-dark);
+    border-bottom: 3px solid var(--gold-dark);
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--spacing-lg);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.main-content::-webkit-scrollbar {
+    display: none;
+}
+
+/* Hospital Directory Table */
+.directory-table {
     width: 100%;
     border-collapse: collapse;
-    background: white;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background: var(--white);
+    border: 4px solid var(--gold);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
-.hospital-directory .level {
-    background: linear-gradient(135deg, var(--primary), var(--crimson-dark));
-    color: white;
-    padding: 20px;
-    text-align: center;
-    font-size: 2rem;
-    font-weight: 700;
-    font-family: var(--font-display);
-    letter-spacing: 0.1em;
+/* Double-line gold border effect */
+.directory-table::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    border: 2px solid var(--gold);
+    pointer-events: none;
+}
+
+/* Category Header Row */
+.category-row {
+    background: linear-gradient(135deg, var(--imperial-red) 0%, var(--imperial-red-dark) 100%);
     border-bottom: 4px solid var(--gold);
 }
 
-.hospital-directory .department {
-    background: linear-gradient(135deg, var(--secondary), var(--muted));
-    color: var(--foreground);
-    padding: 15px 20px;
-    font-size: 1.25rem;
-    font-weight: 600;
-    border-bottom: 2px solid var(--border);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.hospital-directory .doctor {
-    padding: 15px 20px;
-    border-bottom: 1px solid var(--border);
-    font-size: 1rem;
-}
-
-.hospital-directory .doctor-name {
-    font-weight: 600;
-    color: var(--foreground);
-    display: block;
-    margin-bottom: 4px;
-}
-
-.hospital-directory .doctor-specialty {
-    font-size: 0.875rem;
-    color: var(--muted-foreground);
-}
-
-.hospital-directory .floor {
-    padding: 15px 20px;
-    border-bottom: 1px solid var(--border);
-    text-align: right;
-    font-weight: 600;
-    color: var(--primary);
-    font-size: 1.125rem;
-}
-
-.hospital-directory tr:hover {
-    background-color: var(--muted);
-}
-
-/* Date/Time Display */
-.datetime-display {
-    text-align: center;
-    padding: 10px;
-    background: var(--secondary);
-    border-radius: var(--radius);
-    margin-bottom: var(--spacing-4);
-    font-weight: 500;
-}
-
-.current-day {
-    color: var(--primary);
+.category-cell {
+    padding: var(--spacing-lg) var(--spacing-xl);
+    font-size: 2.2rem;
     font-weight: 700;
+    color: var(--white);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+    border-right: 2px solid var(--gold);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-    .main-layout {
-        flex-direction: column;
-    }
-    
-    .sidebar {
-        width: 100%;
-        border-right: none;
-        border-bottom: 1px solid var(--border);
-    }
-    
-    .menu-container {
-        grid-template-columns: 1fr;
-    }
-    
-    .hospital-directory {
-        font-size: 0.875rem;
-    }
-    
-    .hospital-directory .level {
-        font-size: 1.5rem;
-    }
+.category-cell:last-child {
+    border-right: none;
+}
+
+/* Menu Item Row */
+.menu-row {
+    border-bottom: 2px solid var(--cream);
+    transition: background-color 0.2s;
+}
+
+.menu-row:hover {
+    background-color: var(--cream-light);
+}
+
+.menu-row:nth-child(even) {
+    background-color: var(--gray-light);
+}
+
+.menu-row:nth-child(even):hover {
+    background-color: var(--cream-light);
+}
+
+/* Doctor Column (Left) - Item Name */
+.doctor-cell {
+    padding: var(--spacing-lg) var(--spacing-xl);
+    width: 55%;
+    vertical-align: middle;
+}
+
+.doctor-name {
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: var(--dark-brown);
+    display: block;
+    margin-bottom: var(--spacing-xs);
+}
+
+.doctor-name span {
+    font-size: 1.3rem;
+    font-weight: 400;
+    color: var(--brown-light);
+    display: block;
+    margin-top: var(--spacing-xs);
+}
+
+/* Residentsessional Column (Middle) - Status */
+.residentsessional-cell {
+    padding: var(--spacing-lg);
+    width: 15%;
+    text-align: center;
+    vertical-align: middle;
+    border-left: 1px solid var(--cream);
+    border-right: 1px solid var(--cream);
+}
+
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+    border-radius: var(--radius-full);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--white);
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.4);
+}
+
+/* Floor Column (Right) - Price */
+.floor-cell {
+    padding: var(--spacing-lg) var(--spacing-xl);
+    width: 30%;
+    text-align: right;
+    vertical-align: middle;
+}
+
+.price {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--imperial-red);
+    letter-spacing: 0.02em;
+}
+
+/* Empty State */
+.empty-state {
+    padding: var(--spacing-2xl);
+    text-align: center;
+    color: var(--gray);
+}
+
+.empty-state p {
+    font-size: 1.5rem;
+    margin-bottom: var(--spacing-md);
+}
+
+/* Footer */
+.footer {
+    background: linear-gradient(135deg, var(--imperial-red) 0%, var(--imperial-red-dark) 100%);
+    padding: var(--spacing-lg) var(--spacing-2xl);
+    border-top: 6px solid var(--gold);
+    text-align: center;
+    color: var(--white);
+}
+
+.footer-text {
+    font-size: 1.2rem;
+    letter-spacing: 0.1em;
+    opacity: 0.9;
+}
+
+/* Decorative corner elements */
+.corner-decoration {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    border: 4px solid var(--gold);
+}
+
+.corner-top-left {
+    top: var(--spacing-lg);
+    left: var(--spacing-lg);
+    border-right: none;
+    border-bottom: none;
+}
+
+.corner-top-right {
+    top: var(--spacing-lg);
+    right: var(--spacing-lg);
+    border-left: none;
+    border-bottom: none;
+}
+
+.corner-bottom-left {
+    bottom: var(--spacing-lg);
+    left: var(--spacing-lg);
+    border-right: none;
+    border-top: none;
+}
+
+.corner-bottom-right {
+    bottom: var(--spacing-lg);
+    right: var(--spacing-lg);
+    border-left: none;
+    border-top: none;
 }
     </style>
 </head>
 <body>
-    <div class="main-layout">
-        <!-- Sidebar for level filtering -->
-        <aside class="sidebar">
-            <h1>Canteen Menu</h1>
-            
-            <div class="datetime-display">
-                <span id="current-date"></span>
-            </div>
-            
-            <div class="level-filters">
-                <h2>Filter by Level</h2>
-                <div class="mt-4">
-                    <a href="?level=2" class="level-filter <?php echo $canteenLevel == 2 ? 'active' : ''; ?>">Level 2</a>
-                    <a href="?level=3" class="level-filter <?php echo $canteenLevel == 3 ? 'active' : ''; ?>">Level 3</a>
-                    <a href="?level=4" class="level-filter <?php echo $canteenLevel == 4 ? 'active' : ''; ?>">Level 4</a>
+    <div class="signage-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="level-badge">
+                    <span class="level-text">L<?php echo $canteenLevel; ?></span>
+                </div>
+                <div class="time-display">
+                    <span id="timeDisplay">--:--</span>
+                    <span id="dateDisplay"><?php echo $currentDate; ?></span>
                 </div>
             </div>
-            
-            <div class="mt-4">
-                <h2>Display Options</h2>
-                <div class="flex mt-4 gap-2">
-                    <label class="switch">
-                        <input type="checkbox" id="tv-mode-toggle">
-                        <span class="slider"></span>
-                    </label>
-                    <span class="switch-label">TV Mode</span>
-                </div>
-            </div>
-            
-            <div class="mt-4">
-                <a href="admin/login.php" class="btn btn-secondary">Admin Login</a>
-            </div>
-        </aside>
+        </header>
         
-        <!-- Main content area -->
-        <main class="content">
-            <div class="container">
-                <!-- Hospital Directory Style UI -->
-                <table class="hospital-directory">
-                    <thead>
-                        <tr>
-                            <th class="level">Level <?php echo $canteenLevel; ?> Canteen</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php
-                        // Group items by category
-                        $currentCategory = '';
-                        foreach ($items as $item) {
-                            // Display category header when it changes
-                            if ($item['category'] !== $currentCategory) {
-                                $currentCategory = $item['category'];
-                                ?>
-                                <tr class="department">
-                                    <td colspan="1"><?php echo htmlspecialchars($currentCategory); ?></td>
-                                </tr>
-                                <?php
-                            }
+        <!-- Decorative gold border -->
+        <div class="header-decoration"></div>
+        
+        <!-- Main Content - Hospital Directory Style Table -->
+        <main class="main-content">
+            <table class="directory-table">
+                <tbody>
+                    <?php
+                    // Group items by category
+                    $currentCategory = '';
+                    $firstItem = true;
+                    
+                    foreach ($items as $item) {
+                        // Display category header when it changes
+                        if ($item['category'] !== $currentCategory) {
+                            $currentCategory = $item['category'];
                             ?>
-                            <tr class="doctor">
-                                <td>
-                                    <span class="doctor-name">
-                                        <?php echo htmlspecialchars($item['name']); ?>
-                                        <small style="font-weight: 400; color: var(--muted-foreground);">
-                                            (<?php echo $item['unit_num'] . ' ' . htmlspecialchars($item['unit_type']) . ($item['unit_num'] > 1 ? 's' : ''); ?>)
-                                        </small>
-                                    </span>
-                                    <?php if (!empty($item['description'])): ?>
-                                    <span class="doctor-specialty"><?php echo htmlspecialchars($item['description']); ?></span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="floor">RM <?php echo number_format($item['price'], 2); ?></td>
-                            </tr>
-                            <?php
-                        }
-                        
-                        // If no items found
-                        if (empty($items)) {
-                            ?>
-                            <tr>
-                                <td colspan="2" style="padding: 40px; text-align: center; color: var(--muted-foreground);">
-                                    <p>No menu items available for today (<?php echo $currentDay; ?>).</p>
-                                    <p>Please check back tomorrow or contact the admin.</p>
+                            <tr class="category-row">
+                                <td class="category-cell" colspan="3">
+                                    <?php echo htmlspecialchars($currentCategory); ?>
                                 </td>
                             </tr>
                             <?php
                         }
                         ?>
-                    </tbody>
-                </table>
-            </div>
+                        <tr class="menu-row">
+                            <!-- Left Column: Doctor/Item Name -->
+                            <td class="doctor-cell">
+<span class="doctor-name">
+                                    <?php echo htmlspecialchars($item['name']); ?>
+                                    <span><?php echo $item['unit_num'] . ' ' . $item['unit_type'] . ($item['unit_num'] > 1 ? 's' : ''); ?></span>
+                                </span>
+                            </td>
+                            
+                            <!-- Middle Column: Status (R for Available) -->
+                            <td class="residentsessional-cell">
+                                <span class="status-indicator">R</span>
+                            </td>
+                            
+                            <!-- Right Column: Floor/Price -->
+                            <td class="floor-cell">
+                                <span class="price">RM <?php echo number_format($item['price'], 2); ?></span>
+                            </td>
+                        </tr>
+                        <?php
+                    }
+                    
+                    // If no items found
+                    if (empty($items)) {
+                        ?>
+                        <tr>
+                            <td colspan="3" class="empty-state">
+                                <p>No menu items available for today (<?php echo $currentDay; ?>).</p>
+                                <p>Please check back tomorrow or contact the admin.</p>
+                            </td>
+                        </tr>
+                        <?php
+                    }
+                    ?>
+                </tbody>
+            </table>
         </main>
+        
+        <!-- Footer -->
+        <footer class="footer">
+            <p class="footer-text">CANTEEN MENU SYSTEM</p>
+        </footer>
+        
+        <!-- Decorative corners -->
+        <div class="corner-decoration corner-top-left"></div>
+        <div class="corner-decoration corner-top-right"></div>
+        <div class="corner-decoration corner-bottom-left"></div>
+        <div class="corner-decoration corner-bottom-right"></div>
     </div>
     
-    <script src="assets/js/CanteenSystem.js"></script>
+    <!-- Inline JS using PHP include for Chromium 87 compatibility -->
+    <?php include_once 'assets/js/CanteenSystem.js'; ?>
     <script>
         /**
          * Update Date and Time Display
@@ -870,36 +498,36 @@ input:checked + .slider:before {
             var dayName = days[now.getDay()];
             var monthName = months[now.getMonth()];
             var dateNum = now.getDate();
+            var year = now.getFullYear();
             
-            var dateString = dayName + ', ' + monthName + ' ' + dateNum;
+            // Format time as HH:MM
+            var hours = now.getHours();
+            var minutes = now.getMinutes();
+            var ampm = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12;
+            hours = hours ? hours : 12; // the hour '0' should be '12'
+            minutes = minutes < 10 ? '0' + minutes : minutes;
             
-            var dateElement = document.getElementById('current-date');
+            var timeString = hours + ':' + minutes + ' ' + ampm;
+            var dateString = dayName + ', ' + monthName + ' ' + dateNum + ', ' + year;
+            
+            var timeElement = document.getElementById('timeDisplay');
+            var dateElement = document.getElementById('dateDisplay');
+            
+            if (timeElement) {
+                timeElement.textContent = timeString;
+            }
             if (dateElement) {
                 dateElement.textContent = dateString;
             }
         }
         
-        // Initialize date on page load
+        // Initialize date and time on page load
         document.addEventListener('DOMContentLoaded', function() {
             updateDateTime();
             
-            // Update time every minute
-            setInterval(updateDateTime, 60000);
-        });
-        
-        // Update level title when level filter is clicked (for JS compatibility)
-        document.querySelectorAll('.level-filter').forEach(function(filter) {
-            filter.addEventListener('click', function(e) {
-                var level = e.target.dataset.level;
-                if (!level) {
-                    // For anchor tags, get from href
-                    var href = e.target.getAttribute('href');
-                    var match = href.match(/level=(\d+)/);
-                    if (match) {
-                        level = match[1];
-                    }
-                }
-            });
+            // Update time every second for accurate clock
+            setInterval(updateDateTime, 1000);
         });
     </script>
 </body>

@@ -34,11 +34,31 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
--- Insert sample menu items (one for each level)
-INSERT INTO menu_items (name, price, category, canteen_level, description, is_available) VALUES
-('Chicken Sandwich', 5.99, 'Snacks', 2, 'Freshly made chicken sandwich with lettuce and mayo', TRUE),
-('Vegetable Pasta', 7.50, 'Main Course', 3, 'Pasta with seasonal vegetables in a light cream sauce', TRUE),
-('Fresh Fruit Salad', 4.25, 'Dessert', 4, 'A mix of seasonal fruits with honey drizzle', TRUE);
+-- Insert sample menu items with day_to_display for dynamic filtering
+-- 'Daily' items show every day
+-- 'Wednesday' items show only on Wednesday
+
+-- Level 2 Canteen Items
+INSERT INTO menu_items (name, price, category, canteen_level, description, is_available, unit_num, unit_type, day_to_display) VALUES
+('Chicken Sandwich', 5.99, 'Snacks', 2, 'Freshly made chicken sandwich with lettuce and mayo', TRUE, 1, 'Piece', 'Daily'),
+('Nasi Lemak Set', 8.50, 'Main Course', 2, 'Coconut rice with sambal, chicken, and egg', TRUE, 1, 'Set', 'Wednesday'),
+('Mee Goreng Mamak', 7.00, 'Main Course', 2, 'Fried noodles with shrimp and tofu', TRUE, 1, 'Bowl', 'Daily'),
+('Milo Godzilla', 4.00, 'Beverage', 2, 'Large Milo with condensed milk', TRUE, 1, 'Cup', 'Daily'),
+('Kuih Lapis', 2.50, 'Dessert', 2, 'Layered cake - 7 pieces', TRUE, 7, 'Piece', 'Wednesday');
+
+-- Level 3 Canteen Items
+INSERT INTO menu_items (name, price, category, canteen_level, description, is_available, unit_num, unit_type, day_to_display) VALUES
+('Vegetable Pasta', 7.50, 'Main Course', 3, 'Pasta with seasonal vegetables in a light cream sauce', TRUE, 1, 'Bowl', 'Daily'),
+('Roti Canai', 2.00, 'Snacks', 3, 'Flaky flatbread with dhal - 2 pieces', TRUE, 2, 'Piece', 'Wednesday'),
+('Teh Tarik', 3.00, 'Beverage', 3, 'Pulled tea with condensed milk', TRUE, 1, 'Cup', 'Daily'),
+('Fried Rice', 6.50, 'Main Course', 3, 'Egg fried rice with chicken', TRUE, 1, 'Plate', 'Wednesday');
+
+-- Level 4 Canteen Items
+INSERT INTO menu_items (name, price, category, canteen_level, description, is_available, unit_num, unit_type, day_to_display) VALUES
+('Fresh Fruit Salad', 4.25, 'Dessert', 4, 'A mix of seasonal fruits with honey drizzle', TRUE, 1, 'Bowl', 'Daily'),
+('Waffle Platter', 9.00, 'Dessert', 4, '2 Belgian waffles with ice cream', TRUE, 2, 'Piece', 'Wednesday'),
+('Iced Lemon Tea', 3.50, 'Beverage', 4, 'Fresh brewed lemon tea', TRUE, 1, 'Glass', 'Daily'),
+('Chicken Chop', 10.00, 'Main Course', 4, 'Grilled chicken with peppercorn sauce', TRUE, 1, 'Piece', 'Wednesday');
 
 -- Create default admin user (username: admin, password: admin123)
 -- Password is encrypted using password_hash
