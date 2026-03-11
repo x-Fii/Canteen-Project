@@ -1,207 +1,84 @@
-# 🍴 Campus Canteen Menu System
+# Canteen Menu System
 
-A modern, responsive CRUD application for managing and displaying canteen menus across multiple levels. Built with **Vite**, **React**, **TypeScript**, and **Firebase Firestore**.
+A complete Canteen Menu System built using a LAMP Stack (PHP 8, MySQL, Apache). This system includes a frontend for displaying menu items, an admin dashboard for managing menu items, and a database for storing the data.
 
----
+## Features
 
-## 🏗️ Tech Stack
+- **Frontend**:
+  - Modern, responsive design with shadcn/ui aesthetic
+  - Level filtering (Level 1, 2, 3)
+  - TV Mode for high-visibility display
+  - Mobile-first layout
 
-| Component | Technology | Why? |
-| --------- | ---------- | ----- |
-| **Build Tool** | **Vite** | Fast bundling with HMR for smooth development |
-| **Framework** | **React 18+** | Component-based UI with efficient rendering |
-| **Language** | **TypeScript** | Type safety and better developer experience |
-| **Styling** | **Tailwind CSS** | Utility-first CSS for rapid UI development |
-| **UI Components** | **shadcn/ui** | Accessible, customizable components built on Radix UI |
-| **Database** | **Firebase Firestore** | Serverless NoSQL with real-time sync |
-| **Authentication** | **Firebase Auth** | Secure user authentication |
-| **Backend Logic** | **Firebase Cloud Functions** | Server-side user management |
-| **State Management** | **TanStack React Query** | Efficient server state caching |
-| **Validation** | **Zod** | Schema validation with TypeScript support |
+- **Admin Dashboard**:
+  - Secure login with password hashing
+  - Add, edit, and delete menu items
+  - View all menu items in a table
 
----
+- **API**:
+  - RESTful API for menu items
+  - Authentication API for login/logout
 
-## 📂 Project Structure
+## Setup Instructions
 
-```
-canteen-project/
-├── functions/                 # Firebase Cloud Functions
-│   └── src/
-│       ├── index.ts           # Function exports
-│       └── admin.ts           # Admin-only functions
-├── public/                     # Static assets
-│   ├── icons/                 # PWA icons
-│   └── manifest.json          # PWA manifest
-├── src/
-│   ├── components/
-│   │   └── ui/                # shadcn-ui components (50+)
-│   ├── hooks/                 # Custom React hooks
-│   ├── lib/
-│   │   ├── firebase-new.ts    # Firebase config & hooks
-│   │   ├── constants.ts      # App constants
-│   │   ├── schemas.ts        # Zod validation schemas
-│   │   └── utils.ts           # Utility functions
-│   ├── pages/
-│   │   ├── Index.tsx          # Public menu display
-│   │   ├── Admin.tsx          # Admin panel
-│   │   └── NotFound.tsx       # 404 page
-│   ├── test/                  # Vitest tests
-│   ├── App.tsx                # Main app with routing
-│   └── main.tsx               # Entry point
-├── .env                       # Environment variables
-├── firebase.json              # Firebase config
-├── tailwind.config.ts         # Tailwind config
-├── vite.config.ts             # Vite config
-└── package.json               # Dependencies
-```
+### Prerequisites
 
----
+- PHP 8.0 or higher
+- MySQL 5.7 or higher
+- Apache web server
+- XAMPP (recommended for easy setup)
 
-## 🛠️ Implementation Details
+### Installation
 
-### 1. Firebase Firestore Schema
+1. Clone the repository to your XAMPP htdocs folder:
+   ```
+   git clone https://github.com/yourusername/Canteen-Project.git
+   ```
 
-**menu_items collection:**
-```
-typescript
-interface MenuItem {
-  id: string;
-  name: string;           // Food name
-  price: number;          // Price in RM
-  category: string;       // "Main Course" | "Dessert" | "Beverage" | "Snacks"
-  canteen_level: string; // "Level 1" | "Level 2" | "Level 3"
-  created_at: unknown;   // Firestore timestamp
-}
-```
+2. Create the database and tables by running the SQL script:
+   ```
+   mysql -u root -e "source sql/schema.sql"
+   ```
+   
+   Or if using XAMPP:
+   ```
+   c:\xampp\mysql\bin\mysql -u root -e "source c:/xampp/htdocs/Canteen-Project/sql/schema.sql"
+   ```
 
-**users collection:**
-```
-typescript
-interface UserDoc {
-  uid: string;
-  email: string;
-  role: "admin" | "content_manager";
-  createdAt: unknown;
-  lastSignInAt?: unknown;
-}
-```
+3. Access the application:
+   - Frontend: http://localhost/Canteen-Project/
+   - Admin Dashboard: http://localhost/Canteen-Project/admin/login.php
 
-### 2. React + shadcn-ui Usage
+### Default Admin Credentials
 
-- **Dialog** for create/edit modals
-- **Toast/Sonner** for notifications
-- **Table** for admin menu listing
-- **Select** for category/level dropdowns
-- **Form** with react-hook-form + Zod validation
+- Username: admin
+- Password: admin123
 
-### 3. Dynamic Filtering
+## Project Structure
 
-```
-typescript
-// Real-time filtering by canteen level
-const q = query(
-  collection(db, "menu_items"),
-  where("canteen_level", "==", selectedLevel),
-  orderBy("category"),
-  orderBy("name")
-);
+- `sql/schema.sql`: Database schema and sample data
+- `includes/db.php`: Database connection
+- `api/menu.php`: REST API for menu items
+- `api/auth.php`: Authentication API
+- `assets/js/CanteenSystem.js`: Frontend JavaScript
+- `assets/css/styles.css`: CSS styles
+- `index.php`: Main frontend page
+- `admin/login.php`: Admin login page
+- `admin/dashboard.php`: Admin dashboard
+- `admin/logout.php`: Logout functionality
 
-const unsubscribe = onSnapshot(q, (snapshot) => {
-  // Real-time updates when data changes
-});
-```
+## Browser Compatibility
 
----
+This system is compatible with Chromium 87 and uses ES6 Classes for JavaScript but strictly avoids private class fields.
 
-## 🚀 Getting Started
+## Style Guide
 
-### 1. Clone the Project
+The system uses Vanilla CSS throughout with a shadcn/ui aesthetic:
+- Inter font
+- Clean borders
+- Minimal gray/white palette
+- Responsive mobile-first layouts
 
-```
-bash
-git clone <your-repo-url>
-cd canteen-project
-```
+## License
 
-### 2. Install Dependencies
-
-```
-bash
-npm install
-```
-
-### 3. Configure Firebase
-
-Create a `.env` file in the root directory:
-
-```
-env
-# Firebase Config
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
-```
-
-### 4. Set Up Firestore Rules
-
-```
-javascript
-// firestore.rules
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /menu_items/{item} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.token.role in ['admin', 'content_manager'];
-    }
-    
-    match /users/{userId} {
-      allow read: if request.auth != null && request.auth.token.role == 'admin';
-      allow write: if request.auth != null && request.auth.token.role == 'admin';
-    }
-  }
-}
-```
-
-### 5. Run Development Server
-
-```
-bash
-npm run dev
-```
-
-The app will be available at `http://localhost:5173`
-
----
-
-## 💡 Key Features
-
-- **📱 Responsive Design** - Works on mobile, tablet, and desktop
-- **⚡ Real-time Updates** - Menu changes reflect instantly via Firestore listeners
-- **🔐 Role-based Access** - Admin and Content Manager roles
-- **🌙 Offline Support** - Shows offline indicator when connection lost
-- **📺 TV Mode** - Add `?view=tv` to URL for TV display
-- ** Testing🧪** - Vitest setup with React Testing Library
-
----
-
-## 📝 Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start dev server |
-| `npm run build` | Production build |
-| `npm run preview` | Preview production build |
-| `npm run lint` | Run ESLint |
-| `npm run test` | Run tests |
-| `npm run test:watch` | Run tests in watch mode |
-
----
-
-## 📄 License
-
-MIT License - Feel free to use this project for your own canteen management system.
+This project is licensed under the MIT License - see the LICENSE file for details.
