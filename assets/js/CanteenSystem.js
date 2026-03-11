@@ -16,7 +16,7 @@ class CanteenManager {
         this.tvModeToggle = document.getElementById('tv-mode-toggle');
         
         // Current state
-        this.currentLevel = 1; // Default level
+        this.currentLevel = 2; // Default level
         this.isTvMode = false;
         
         // Initialize the system

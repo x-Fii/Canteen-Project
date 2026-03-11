@@ -4,16 +4,56 @@
  * 
  * REST API to handle GET (fetch by level), POST (create), PUT (update), and DELETE (remove) operations
  * for menu items.
+ * 
+ * Access Control:
+ * - GET: Public (anyone can view menu)
+ * - POST/PUT/DELETE: Requires login (admin or content_manager role)
  */
+
+// Start session to check user authentication
+session_start();
 
 // Set headers for API
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json; charset=UTF-8");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
+header("Access-Control-Allow-Credentials: true");
 
 // Include database connection
 include_once '../includes/db.php';
+
+/**
+ * Check if user is logged in
+ * 
+ * @return bool True if user is logged in, false otherwise
+ */
+function isLoggedIn() {
+    return isset($_SESSION['user_id']) && isset($_SESSION['role']);
+}
+
+/**
+ * Check if user can manage menu items
+ * Allowed roles: admin, content_manager
+ * 
+ * @return bool True if user can manage menu, false otherwise
+ */
+function canManageMenu() {
+    if (!isLoggedIn()) {
+        return false;
+    }
+    $allowed_roles = ['admin', 'content_manager'];
+    return in_array($_SESSION['role'], $allowed_roles);
+}
+
+/**
+ * Check if user is admin
+ * 
+ * @return bool True if user is admin, false otherwise
+ */
+function isAdmin() {
+    return isset($_SESSION['role']) && $_SESSION['role'] === 'admin';
+}
 
 // Create database connection
 $database = new Database();
@@ -129,6 +169,13 @@ function getMenuItems($db) {
  * @param PDO $db Database connection
  */
 function createMenuItem($db) {
+    // Check if user can manage menu (admin or content_manager)
+    if (!canManageMenu()) {
+        http_response_code(403);
+        echo json_encode(array("message" => "Access denied. Login required to create menu items."));
+        return;
+    }
+    
     // Get posted data
     $data = json_decode(file_get_contents("php://input"));
     
@@ -195,6 +242,13 @@ function createMenuItem($db) {
  * @param PDO $db Database connection
  */
 function updateMenuItem($db) {
+    // Check if user can manage menu (admin or content_manager)
+    if (!canManageMenu()) {
+        http_response_code(403);
+        echo json_encode(array("message" => "Access denied. Login required to update menu items."));
+        return;
+    }
+    
     // Get posted data
     $data = json_decode(file_get_contents("php://input"));
     
@@ -259,6 +313,13 @@ function updateMenuItem($db) {
  * @param PDO $db Database connection
  */
 function deleteMenuItem($db) {
+    // Check if user can manage menu (admin or content_manager)
+    if (!canManageMenu()) {
+        http_response_code(403);
+        echo json_encode(array("message" => "Access denied. Login required to delete menu items."));
+        return;
+    }
+    
     // Get posted data
     $data = json_decode(file_get_contents("php://input"));
     
