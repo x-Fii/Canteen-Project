@@ -25,14 +25,15 @@ try {
 // Get selected level from query parameter (default to 2)
 $canteenLevel = isset($_GET['level']) ? (int)$_GET['level'] : 2;
 
-// SQL query: Fetch items where day_to_display is 'Wednesday' OR 'Daily'
+// Dynamic day filter + Daily
+$currentDay = date('l');
 $sql = "SELECT * FROM menu_items 
-        WHERE (day_to_display = 'Wednesday' OR day_to_display = 'Daily') 
+        WHERE (day_to_display = 'Daily' OR day_to_display = ?) 
         AND is_available = 1 
         AND canteen_level = ?
         ORDER BY category, name";
 $stmt = $pdo->prepare($sql);
-$stmt->execute([$canteenLevel]);
+$stmt->execute([$currentDay, $canteenLevel]);
 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get current date for display

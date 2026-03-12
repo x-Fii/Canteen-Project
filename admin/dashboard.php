@@ -25,113 +25,117 @@ $error_message = "";
 
 // Handle form submissions
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Check if user is admin for user management actions
-    if ($user_role !== 'admin') {
-        $error_message = "Access denied. Admin only.";
-    } elseif (isset($_POST['add_user'])) {
-        // Add new user
-        $username = htmlspecialchars(strip_tags($_POST['username']));
-        $email = htmlspecialchars(strip_tags($_POST['email']));
-        $password = $_POST['password'];
-        $role = htmlspecialchars(strip_tags($_POST['role']));
-        
-        // Validate input
-        if (empty($username) || empty($password) || empty($role)) {
-            $error_message = "Please fill in all required fields";
-        } elseif (!in_array($role, ['admin', 'content_manager'])) {
-            $error_message = "Invalid role selected";
+    // Handle user management actions (admin only)
+    if (isset($_POST['add_user']) || isset($_POST['update_user']) || isset($_POST['delete_user'])) {
+        if ($user_role !== 'admin') {
+            $error_message = "Access denied. Admin only.";
         } else {
-            // Check if username already exists
-            $query = "SELECT id FROM users WHERE username = :username";
-            $stmt = $db->prepare($query);
-            $stmt->bindParam(':username', $username);
-            $stmt->execute();
-            
-            if ($stmt->rowCount() > 0) {
-                $error_message = "Username already exists";
-            } else {
-                // Hash password
-                $password_hash = password_hash($password, PASSWORD_DEFAULT);
+            // Add new user
+            if (isset($_POST['add_user'])) {
+                $username = htmlspecialchars(strip_tags($_POST['username']));
+                $email = htmlspecialchars(strip_tags($_POST['email']));
+                $password = $_POST['password'];
+                $role = htmlspecialchars(strip_tags($_POST['role']));
                 
-                // Insert new user
-                $query = "INSERT INTO users (username, email, password, role) VALUES (:username, :email, :password, :role)";
-                $stmt = $db->prepare($query);
-                $stmt->bindParam(':username', $username);
-                $stmt->bindParam(':email', $email);
-                $stmt->bindParam(':password', $password_hash);
-                $stmt->bindParam(':role', $role);
-                
-                if ($stmt->execute()) {
-                    $success_message = "User added successfully";
+                // Validate input
+                if (empty($username) || empty($password) || empty($role)) {
+                    $error_message = "Please fill in all required fields";
+                } elseif (!in_array($role, ['admin', 'content_manager'])) {
+                    $error_message = "Invalid role selected";
                 } else {
-                    $error_message = "Failed to add user";
+                    // Check if username already exists
+                    $query = "SELECT id FROM users WHERE username = :username";
+                    $stmt = $db->prepare($query);
+                    $stmt->bindParam(':username', $username);
+                    $stmt->execute();
+                    
+                    if ($stmt->rowCount() > 0) {
+                        $error_message = "Username already exists";
+                    } else {
+                        // Hash password
+                        $password_hash = password_hash($password, PASSWORD_DEFAULT);
+                        
+                        // Insert new user
+                        $query = "INSERT INTO users (username, email, password, role) VALUES (:username, :email, :password, :role)";
+                        $stmt = $db->prepare($query);
+                        $stmt->bindParam(':username', $username);
+                        $stmt->bindParam(':email', $email);
+                        $stmt->bindParam(':password', $password_hash);
+                        $stmt->bindParam(':role', $role);
+                        
+                        if ($stmt->execute()) {
+                            $success_message = "User added successfully";
+                        } else {
+                            $error_message = "Failed to add user";
+                        }
+                    }
                 }
-            }
-        }
-    } elseif (isset($_POST['update_user'])) {
-        // Update user
-        $id = htmlspecialchars(strip_tags($_POST['id']));
-        $username = htmlspecialchars(strip_tags($_POST['username']));
-        $email = htmlspecialchars(strip_tags($_POST['email']));
-        $role = htmlspecialchars(strip_tags($_POST['role']));
-        $password = $_POST['password'];
-        
-        // Validate input
-        if (empty($id) || empty($username) || empty($role)) {
-            $error_message = "Please fill in all required fields";
-        } elseif (!in_array($role, ['admin', 'content_manager'])) {
-            $error_message = "Invalid role selected";
-        } else {
-            // Check if username already exists for another user
-            $query = "SELECT id FROM users WHERE username = :username AND id != :id";
-            $stmt = $db->prepare($query);
-            $stmt->bindParam(':username', $username);
-            $stmt->bindParam(':id', $id);
-            $stmt->execute();
-            
-            if ($stmt->rowCount() > 0) {
-                $error_message = "Username already exists";
-            } else {
-                // Build update query
-                $query = "UPDATE users SET username = :username, email = :email, role = :role";
-                if (!empty($password)) {
-                    $query .= ", password = :password";
-                }
-                $query .= " WHERE id = :id";
+            } elseif (isset($_POST['update_user'])) {
+                // Update user
+                $id = htmlspecialchars(strip_tags($_POST['id']));
+                $username = htmlspecialchars(strip_tags($_POST['username']));
+                $email = htmlspecialchars(strip_tags($_POST['email']));
+                $role = htmlspecialchars(strip_tags($_POST['role']));
+                $password = $_POST['password'];
                 
-                $stmt = $db->prepare($query);
-                $stmt->bindParam(':id', $id);
-                $stmt->bindParam(':username', $username);
-                $stmt->bindParam(':email', $email);
-                $stmt->bindParam(':role', $role);
-                if (!empty($password)) {
-                    $password_hash = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt->bindParam(':password', $password_hash);
-                }
-                
-                if ($stmt->execute()) {
-                    $success_message = "User updated successfully";
+                // Validate input
+                if (empty($id) || empty($username) || empty($role)) {
+                    $error_message = "Please fill in all required fields";
+                } elseif (!in_array($role, ['admin', 'content_manager'])) {
+                    $error_message = "Invalid role selected";
                 } else {
-                    $error_message = "Failed to update user";
+                    // Check if username already exists for another user
+                    $query = "SELECT id FROM users WHERE username = :username AND id != :id";
+                    $stmt = $db->prepare($query);
+                    $stmt->bindParam(':username', $username);
+                    $stmt->bindParam(':id', $id);
+                    $stmt->execute();
+                    
+                    if ($stmt->rowCount() > 0) {
+                        $error_message = "Username already exists";
+                    } else {
+                        // Build update query
+                        $query = "UPDATE users SET username = :username, email = :email, role = :role";
+                        if (!empty($password)) {
+                            $query .= ", password = :password";
+                        }
+                        $query .= " WHERE id = :id";
+                        
+                        $stmt = $db->prepare($query);
+                        $stmt->bindParam(':id', $id);
+                        $stmt->bindParam(':username', $username);
+                        $stmt->bindParam(':email', $email);
+                        $stmt->bindParam(':role', $role);
+                        if (!empty($password)) {
+                            $password_hash = password_hash($password, PASSWORD_DEFAULT);
+                            $stmt->bindParam(':password', $password_hash);
+                        }
+                        
+                        if ($stmt->execute()) {
+                            $success_message = "User updated successfully";
+                        } else {
+                            $error_message = "Failed to update user";
+                        }
+                    }
                 }
-            }
-        }
-    } elseif (isset($_POST['delete_user'])) {
-        // Delete user
-        $id = htmlspecialchars(strip_tags($_POST['id']));
-        
-        // Prevent deleting own account
-        if ($id == $_SESSION['user_id']) {
-            $error_message = "Cannot delete your own account";
-        } else {
-            $query = "DELETE FROM users WHERE id = :id";
-            $stmt = $db->prepare($query);
-            $stmt->bindParam(':id', $id);
-            
-            if ($stmt->execute()) {
-                $success_message = "User deleted successfully";
-            } else {
-                $error_message = "Failed to delete user";
+            } elseif (isset($_POST['delete_user'])) {
+                // Delete user
+                $id = htmlspecialchars(strip_tags($_POST['id']));
+                
+                // Prevent deleting own account
+                if ($id == $_SESSION['user_id']) {
+                    $error_message = "Cannot delete your own account";
+                } else {
+                    $query = "DELETE FROM users WHERE id = :id";
+                    $stmt = $db->prepare($query);
+                    $stmt->bindParam(':id', $id);
+                    
+                    if ($stmt->execute()) {
+                        $success_message = "User deleted successfully";
+                    } else {
+                        $error_message = "Failed to delete user";
+                    }
+                }
             }
         }
     } elseif (isset($_POST['add_item'])) {
