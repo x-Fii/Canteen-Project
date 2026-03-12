@@ -764,7 +764,13 @@ html, body {
             </div>
             
             <div class="mt-4">
-                <a href="../index.php" class="btn btn-secondary">View Menu</a>
+                <a href="../index_level2.php" class="btn btn-secondary">View Menu Level 2</a>
+            </div>
+            <div class="mt-4">
+                <a href="../index_level3.php" class="btn btn-secondary">View Menu Level 3</a>
+            </div>
+            <div class="mt-4">
+                <a href="../index_level4.php" class="btn btn-secondary">View Menu Level 4</a>
             </div>
             
             <div class="mt-4">
