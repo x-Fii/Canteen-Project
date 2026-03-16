@@ -1,12 +1,8 @@
 <?php
 /**
  * Canteen Menu System - Level 4
- * 
- * This file displays the menu for Level 4 canteen with:
- * - Level filtering from URL parameter (default: 4)
- * - Day filtering: Shows items for 'Wednesday' OR 'Daily' only
- * - 2-column card layout (USP-style)
- * - Compact design that fits on screen without scrolling
+ * Optimized for Chromium 87
+ * Features: Centered Headers, Left-Aligned Columns, Fit-to-Screen Layout
  */
 
 // Database connection
@@ -16,16 +12,17 @@ $username = 'if0_41370385';
 $password = 'cl1ck1x123';
 
 try {
+    header('Content-Type: text/html; charset=UTF-8');
     $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
 }
 
-// Get selected level from query parameter (default to 4)
+// Get level from URL or default to 4
 $canteenLevel = isset($_GET['level']) ? (int)$_GET['level'] : 4;
 
-// Dynamic day filter + Daily
+// Filter by Current Day or Daily items
 $currentDay = date('l');
 $sql = "SELECT * FROM menu_items 
         WHERE (day_to_display = 'Daily' OR day_to_display = ?) 
@@ -36,16 +33,16 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute([$currentDay, $canteenLevel]);
 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get current date for display
 $currentDate = date('d/m/Y');
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canteen Menu - Level <?php echo $canteenLevel; ?></title>
-    <style>
+<style>
 /* ========================================
    RESET & BASE STYLES
    ======================================== */
@@ -56,65 +53,39 @@ $currentDate = date('d/m/Y');
 }
 
 :root {
-    /* Theme Colors */
     --cream: #FFF8DC;
     --cream-light: #FFFEF5;
     --imperial-red: #8B0000;
     --imperial-red-dark: #5a0000;
     --gold: #D4AF37;
     --gold-light: #E8D48B;
-    --gold-dark: #B8962E;
     --dark-brown: #3D2914;
-    --brown: #5D4D35;
     --brown-light: #8F7751;
     --white: #FFFFFF;
-    --black: #1a1a1a;
-    --gray-light: #f5f5f5;
-    --gray: #666666;
-    
-    /* Typography */
-    --font-sans: 'Inter', 'Arial', 'Helvetica', sans-serif;
 }
 
-/* ========================================
-   BASE DISPLAY - FIT TO SCREEN NO SCROLL
-   ======================================== */
 html, body {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    font-family: var(--font-sans);
+    font-family: 'Inter', 'Arial', -apple-system, BlinkMacSystemFont, 'Segoe UI Emoji', 'Noto Color Emoji', sans-serif;
     background: var(--cream);
-    color: var(--black);
-    line-height: 1.3;
-    -webkit-font-smoothing: antialiased;
+    line-height: 1.2;
 }
 
-/* ========================================
-   MAIN CONTAINER
-   ======================================== */
 .app-canvas {
     width: 100%;
     height: 100vh;
-    background: var(--cream);
     display: flex;
     flex-direction: column;
-}
-
-.signage-container {
-    width: 100%;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background: linear-gradient(180deg, var(--cream-light) 0%, var(--cream) 100%);
 }
 
 /* ========================================
-   HEADER - COMPACT
+   HEADER - CENTERED TITLE LOGIC
    ======================================== */
 .header {
     background: linear-gradient(135deg, var(--imperial-red) 0%, var(--imperial-red-dark) 100%);
-    padding: 0.4rem 1rem;
+    padding: 0.5rem 1.2rem;
     border-bottom: 3px solid var(--gold);
     flex-shrink: 0;
 }
@@ -125,91 +96,97 @@ html, body {
     align-items: center;
 }
 
-.level-badge {
+/* Left Section */
+.brand-block {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 45px;
-    height: 45px;
-    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
-    border-radius: 50%;
-    border: 2px solid var(--gold-dark);
+    gap: 0.7rem;
+    flex: 1; 
 }
 
-.level-text {
-    font-size: 1.1rem;
-    font-weight: 800;
-    color: var(--imperial-red);
+.header-logo {
+    width: 46px;
+    height: 46px;
+    background: rgba(255,255,255,0.15);
+    padding: 3px;
+    border-radius: 8px;
+}
+
+.header-name p {
+font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--white);
     text-transform: uppercase;
 }
 
+/* CENTERED SECTION */
 .header-title {
-    flex: 1;
+    flex: 2;
     text-align: center;
 }
 
 .header-title h1 {
-    font-size: 1.3rem;
-    font-weight: 700;
+    font-size: 1.5rem;
+    font-weight: 900;
     color: var(--white);
     text-transform: uppercase;
-    letter-spacing: 0.1em;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.12em;
     margin: 0;
+    line-height: 1;
 }
 
 .header-title p {
-    font-size: 0.6rem;
-    color: var(--gold);
-    margin-top: 0.1rem;
+    font-size: 1.1rem;
+    color: var(--gold-light);
+    font-weight: 700;
+    text-transform: uppercase;
     letter-spacing: 0.05em;
+    margin-top: 2px;
 }
 
+/* Right Section */
 .time-display {
+    flex: 1;
     text-align: right;
-    min-width: 100px;
 }
 
 #timeDisplay {
-    font-size: 1.2rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--white);
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
     display: block;
 }
 
 #dateDisplay {
-    font-size: 0.6rem;
+    font-size: 0.85rem;
+    color: var(--gold-light);
     font-weight: 500;
-    color: var(--gold);
 }
 
 .header-decoration {
-    height: 3px;
+    height: 4px;
     background: linear-gradient(90deg, var(--gold) 0%, var(--gold-light) 50%, var(--gold) 100%);
 }
 
 /* ========================================
-   MAIN CONTENT - MULTI CATEGORY 2-COLUMN
-   Chromium 87 compatible
+   MAIN CONTENT - 4 COLUMN GRID
    ======================================== */
 .main-content {
     flex: 1;
     overflow: hidden;
-    padding: 0.45rem;
+    padding: 0.4rem;
 }
 
 .category-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.45rem;
+    gap: 0.4rem;
     width: 100%;
-    height: 100%;
     align-content: flex-start;
 }
 
 .category-col {
-    width: calc(25% - 0.34rem);
+    width: calc(25% - 0.3rem); /* Strict 4 columns */
     min-width: 0;
 }
 
@@ -217,136 +194,127 @@ html, body {
     background: var(--white);
     border: 2px solid var(--gold);
     border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .category-card-header {
-    background: linear-gradient(135deg, var(--imperial-red) 0%, var(--imperial-red-dark) 100%);
+    background: var(--imperial-red);
     color: var(--white);
     padding: 0.35rem 0.5rem;
     border-bottom: 2px solid var(--gold);
 }
 
 .category-card-title {
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
+    font-size: 1.15rem;
+    font-weight: 800;
     text-transform: uppercase;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.menu-list {
-    padding: 0;
-}
-
+/* ========================================
+   MENU ROW - LEFT ALIGNED COLUMNS
+   ======================================== */
 .menu-row {
-    padding: 0.18rem 0.3rem;
+    display: flex;
+    align-items: baseline;
+    padding: 0.3rem 0.4rem;
     border-bottom: 1px solid var(--gold-light);
+    width: 100%;
 }
 
-.menu-row:last-child {
-    border-bottom: none;
-}
+.menu-row:last-child { border-bottom: none; }
 
 .menu-name {
-    font-size: 0.62rem;
+    flex: 0 0 52%; /* Width for Item Name */
+    font-size: 0.95rem;
     font-weight: 700;
     color: var(--dark-brown);
-    display: block;
-    margin-bottom: 0.02rem;
+    text-align: left;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .menu-meta {
-    font-size: 0.52rem;
+    flex: 0 0 23%; /* Width for Unit */
+    font-size: 0.9rem;
     color: var(--brown-light);
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.menu-price {
-    font-size: 0.62rem;
-    font-weight: 700;
+        .menu-price {
+    flex: 0 0 25%; /* Width for Price */
+    font-size: 0.95rem;
+    font-weight: 800;
     color: var(--imperial-red);
-    float: right;
+    text-align: left;
+    white-space: nowrap;
 }
 
-
-/* ========================================
-   FOOTER - COMPACT
-   ======================================== */
-.footer {
-    background: linear-gradient(135deg, var(--imperial-red) 0%, var(--imperial-red-dark) 100%);
-    padding: 0.3rem 1rem;
-    border-top: 2px solid var(--gold);
-    flex-shrink: 0;
-}
-
-.footer-text {
-    font-size: 0.55rem;
-    color: var(--white);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    text-align: center;
-    opacity: 0.9;
+.menu-list {
+    max-height: none;
 }
     </style>
 </head>
 <body>
     <div class="app-canvas">
-        <div class="signage-container">
-            <!-- Header -->
-            <header class="header">
-                <div class="header-content">
-                    <div class="level-badge">
-                        <span class="level-text">L<?php echo $canteenLevel; ?></span>
-                    </div>
-                    <div class="header-title">
-                        <h1>Canteen Menu</h1>
-                        <p>Level <?php echo $canteenLevel; ?> </p>
-                    </div>
-                    <div class="time-display">
-                        <span id="timeDisplay">--:--</span>
-                        <span id="dateDisplay"><?php echo $currentDate; ?></span>
+        <header class="header">
+            <div class="header-content">
+                <div class="brand-block">
+                    <img src="assets/logo-footer.png" alt="Logo" class="header-logo" />
+                    <div class="header-name">
+                        <p>Pin Hwa High School</p>
                     </div>
                 </div>
-            </header>
-            
-            <div class="header-decoration"></div>
-            
-            <!-- Main Content - Multi Category 2-Column -->
-            <main class="main-content">
-                <?php
-                    $grouped = array();
-                    foreach ($items as $item) {
-                        $cat = $item['category'];
-                        if (!isset($grouped[$cat])) {
-                            $grouped[$cat] = array();
-                        }
-                        $grouped[$cat][] = $item;
-                    }
-                    $categories = array_keys($grouped);
-                ?>
+                
+                <div class="header-title">
+                    <h1>Canteen Menu</h1>
+                    <p>Level <?php echo $canteenLevel; ?></p>
+                </div>
+                
+                <div class="time-display">
+                    <span id="timeDisplay">--:--</span>
+                    <span id="dateDisplay"><?php echo $currentDate; ?></span>
+                </div>
+            </div>
+        </header>
+        <div class="header-decoration"></div>
+
+        <main class="main-content">
+            <?php
+                // Re-grouping items by category
+                $grouped = [];
+                foreach ($items as $item) {
+                    $cat = $item['category'];
+                    if (!isset($grouped[$cat])) { $grouped[$cat] = []; }
+                    $grouped[$cat][] = $item;
+                }
+            ?>
+            <?php if (empty($items)): ?>
+                <div style="text-align: center; padding: 2rem; color: var(--brown-light);">
+                    <h2>No items available today for this level.</h2>
+                </div>
+            <?php else: ?>
+
                 <div class="category-grid">
-                    <?php foreach ($categories as $cat): 
-                        $catItems = $grouped[$cat];
-                    ?>
+                    <?php foreach ($grouped as $catName => $catItems): ?>
                         <div class="category-col">
                             <div class="category-card">
                                 <div class="category-card-header">
-                                    <div class="category-card-title"><?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <div class="category-card-title"><?php echo htmlspecialchars($catName, ENT_QUOTES | ENT_HTML5, 'UTF-8'); ?></div>
                                 </div>
                                 <div class="menu-list">
                                     <?php foreach ($catItems as $item): ?>
                                         <div class="menu-row">
-                                            <span class="menu-name"><?php echo htmlspecialchars($item['name'], ENT_QUOTES, 'UTF-8'); ?></span>
-                                            <span class="menu-meta">
-                                                <?php echo htmlspecialchars($item['unit_num'] . ' ' . $item['unit_type'] . ($item['unit_num'] > 1 ? 's' : ''), ENT_QUOTES, 'UTF-8'); ?>
-                                                <span class="menu-price">RM <?php echo number_format($item['price'], 2); ?></span>
-                                            </span>
+                                            <span class="menu-name"><?php echo htmlspecialchars($item['name'], ENT_QUOTES | ENT_HTML5, 'UTF-8'); ?></span>
+                                            <span class="menu-meta"><?php echo htmlspecialchars($item['unit_num'] . ' ' . $item['unit_type'], ENT_QUOTES | ENT_HTML5, 'UTF-8'); ?></span>
+                                            <span class="menu-price">RM <?php echo number_format($item['price'], 2); ?></span>
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
@@ -354,46 +322,36 @@ html, body {
                         </div>
                     <?php endforeach; ?>
                 </div>
-            </main>
-            
-            <!-- Footer -->
-            <footer class="footer">
-                <p class="footer-text">CANTEEN MENU SYSTEM • LEVEL <?php echo $canteenLevel; ?></p>
-            </footer>
-        </div>
+            <?php endif; ?>
+        </main>
     </div>
     
     <script>
         function updateDateTime() {
             var now = new Date();
-            var dateNum = now.getDate();
-            var monthNum = now.getMonth() + 1;
-            var year = now.getFullYear();
-
-            dateNum = dateNum < 10 ? '0' + dateNum : dateNum;
-            monthNum = monthNum < 10 ? '0' + monthNum : monthNum;
-
-            var hours = now.getHours();
-            var minutes = now.getMinutes();
-            var ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12;
-            minutes = minutes < 10 ? '0' + minutes : minutes;
-
-            var timeString = hours + ':' + minutes + ' ' + ampm;
-            var dateString = dateNum + '/' + monthNum + '/' + year;
             
-            var timeElement = document.getElementById('timeDisplay');
-            var dateElement = document.getElementById('dateDisplay');
+            // Format Time
+            var h = now.getHours();
+            var m = now.getMinutes();
+            var ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12;
+            h = h ? h : 12;
+            m = m < 10 ? '0' + m : m;
             
-            if (timeElement) timeElement.textContent = timeString;
-            if (dateElement) dateElement.textContent = dateString;
+            // Format Date
+            var d = now.getDate();
+            var mon = now.getMonth() + 1;
+            var y = now.getFullYear();
+            d = d < 10 ? '0' + d : d;
+            mon = mon < 10 ? '0' + mon : mon;
+
+            document.getElementById('timeDisplay').textContent = h + ':' + m + ' ' + ampm;
+            document.getElementById('dateDisplay').textContent = d + '/' + mon + '/' + y;
         }
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
-        });
+
+        // Run immediately and then every second
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
     </script>
 </body>
 </html>

@@ -101,6 +101,13 @@
             letter-spacing: 0.05em;
         }
 
+        .header-logo {
+           max-width: 45px;
+            height: auto;
+            border-radius: 8px;
+           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
         /* ========================================
            CONTENT
            ======================================== */
@@ -259,6 +266,9 @@
     <div class="app-canvas">
         <!-- Header -->
         <header class="header">
+                <div class="header-content">
+                    <img src="assets/logo-footer.png" alt="Pin Hwa Canteen Logo" width="45" height="45" class="header-logo" />
+                <div class="header-title">
             <h1>Canteen Menu System</h1>
             <p>Welcome to the Digital Menu Display System</p>
         </header>
