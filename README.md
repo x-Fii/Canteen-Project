@@ -321,6 +321,12 @@ Body: {"name":"Test","price":5.00,"category":"Snacks","canteen_level":2}
 3. **Access the application**:
    - Frontend: http://localhost/Canteen-Project/
    - Admin Dashboard: http://localhost/Canteen-Project/admin/login.php
+   
+   PinHwa Canteen (Chromium 87)
+https://pinhwacanteen.42web.io/index_level2.php
+https://pinhwacanteen.42web.io/index_level3.php
+https://pinhwacanteen.42web.io/index_level4.php
+https://pinhwacanteen.42web.io/
 
 ### Default Admin Credentials
 - **Username**: admin
