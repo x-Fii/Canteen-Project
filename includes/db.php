@@ -6,10 +6,10 @@
  */
 
 class Database {
-    private $host = "localhost";
-    private $db_name = "canteen_db";
-    private $username = "root";
-    private $password = "";
+    private $host = "sql100.infinityfree.com";
+    private $db_name = "if0_41370385_PinHwaCanteen";
+    private $username = "if0_41370385";
+    private $password = "cl1ck1x123";
     private $conn;
 
     /**

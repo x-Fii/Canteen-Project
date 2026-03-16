@@ -10,10 +10,10 @@
  */
 
 // Database connection
-$host = 'localhost';
-$dbname = 'canteen_db';
-$username = 'root';
-$password = '';
+$host = 'sql100.infinityfree.com';
+$dbname = 'if0_41370385_PinHwaCanteen';
+$username = 'if0_41370385';
+$password = 'cl1ck1x123';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
@@ -200,17 +200,19 @@ html, body {
 }
 
 .category-grid {
+    display: block;
+}
+
+.category-pair {
     display: flex;
-    flex-wrap: wrap;
-    margin-left: -0.3rem;
-    margin-right: -0.3rem;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+    width: 100%;
 }
 
 .category-col {
-    width: 50%;
-    padding-left: 0.3rem;
-    padding-right: 0.3rem;
-    margin-bottom: 0.6rem;
+    flex: 1;
+    padding: 0 0.3rem;
 }
 
 .category-card {
@@ -235,8 +237,23 @@ html, body {
     text-transform: uppercase;
 }
 
+
+.menu-grid {
+    display: flex;
+}
+
+.menu-column {
+    flex: 1;
+    border-right: 1px solid var(--gold-light);
+    padding: 0.3rem 0.4rem;
+}
+
+.menu-column:last-child {
+    border-right: none;
+}
+
 .menu-row {
-    padding: 0.45rem 0.7rem;
+    padding: 0.25rem 0.3rem;
     border-bottom: 1px solid var(--gold-light);
 }
 
@@ -245,24 +262,25 @@ html, body {
 }
 
 .menu-name {
-    font-size: 0.78rem;
+    font-size: 0.7rem;
     font-weight: 700;
     color: var(--dark-brown);
     display: block;
-    margin-bottom: 0.1rem;
+    margin-bottom: 0.05rem;
 }
 
 .menu-meta {
-    font-size: 0.66rem;
+    font-size: 0.58rem;
     color: var(--brown-light);
 }
 
 .menu-price {
-    font-size: 0.82rem;
+    font-size: 0.72rem;
     font-weight: 700;
     color: var(--imperial-red);
     float: right;
 }
+
 
 /* ========================================
    FOOTER - COMPACT
@@ -295,7 +313,7 @@ html, body {
                     </div>
                     <div class="header-title">
                         <h1>Canteen Menu</h1>
-                        <p>Level <?php echo $canteenLevel; ?> • Wednesday Special</p>
+                        <p>Level <?php echo $canteenLevel; ?> </p>
                     </div>
                     <div class="time-display">
                         <span id="timeDisplay">--:--</span>
@@ -317,24 +335,51 @@ html, body {
                         }
                         $grouped[$cat][] = $item;
                     }
+                    $categories = array_keys($grouped);
+                    $pairs = array_chunk($categories, 2);
                 ?>
                 <div class="category-grid">
-                    <?php foreach ($grouped as $categoryTitle => $categoryItems): ?>
-                        <div class="category-col">
-                            <div class="category-card">
-                                <div class="category-card-header">
-                                    <div class="category-card-title"><?php echo htmlspecialchars($categoryTitle); ?></div>
-                                </div>
-                                <?php foreach ($categoryItems as $item): ?>
-                                    <div class="menu-row">
-                                        <span class="menu-name"><?php echo htmlspecialchars($item['name']); ?></span>
-                                        <span class="menu-meta">
-                                            <?php echo htmlspecialchars($item['unit_num'] . ' ' . $item['unit_type'] . ($item['unit_num'] > 1 ? 's' : '')); ?>
-                                            <span class="menu-price">RM <?php echo number_format($item['price'], 2); ?></span>
-                                        </span>
+                    <?php foreach ($pairs as $pair): ?>
+                        <div class="category-pair">
+                            <?php foreach ($pair as $cat): 
+                                $items = $grouped[$cat];
+                                $total = count($items);
+                                $mid = ceil($total / 2);
+                                $left_items = array_slice($items, 0, $mid);
+                                $right_items = array_slice($items, $mid);
+                            ?>
+                                <div class="category-col">
+                                    <div class="category-card">
+                                        <div class="category-card-header">
+                                            <div class="category-card-title"><?php echo htmlspecialchars($cat); ?></div>
+                                        </div>
+                                        <div class="menu-grid">
+                                            <div class="menu-column menu-left">
+                                                <?php foreach ($left_items as $item): ?>
+                                                    <div class="menu-row">
+                                                        <span class="menu-name"><?php echo htmlspecialchars($item['name']); ?></span>
+                                                        <span class="menu-meta">
+                                                            <?php echo htmlspecialchars($item['unit_num'] . ' ' . $item['unit_type'] . ($item['unit_num'] > 1 ? 's' : '')); ?>
+                                                            <span class="menu-price">RM <?php echo number_format($item['price'], 2); ?></span>
+                                                        </span>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                            <div class="menu-column menu-right">
+                                                <?php foreach ($right_items as $item): ?>
+                                                    <div class="menu-row">
+                                                        <span class="menu-name"><?php echo htmlspecialchars($item['name']); ?></span>
+                                                        <span class="menu-meta">
+                                                            <?php echo htmlspecialchars($item['unit_num'] . ' ' . $item['unit_type'] . ($item['unit_num'] > 1 ? 's' : '')); ?>
+                                                            <span class="menu-price">RM <?php echo number_format($item['price'], 2); ?></span>
+                                                        </span>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                            </div>
+                                        </div>
                                     </div>
-                                <?php endforeach; ?>
-                            </div>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -382,4 +427,3 @@ html, body {
     </script>
 </body>
 </html>
-

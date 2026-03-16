@@ -299,7 +299,7 @@
                 </a>
                 
                 <!-- Admin Button -->
-                <a href="admin/" class="menu-button">
+                <a href="admin/dashboard.php" class="menu-button">
                     <div class="level-badge">
                         <span class="admin-icon">⚙️</span>
                     </div>
