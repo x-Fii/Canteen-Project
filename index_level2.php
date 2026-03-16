@@ -16,7 +16,7 @@ $username = 'if0_41370385';
 $password = 'cl1ck1x123';
 
 try {
-    $pdo = new PDO("mysql:host=$host;dbname=$dbname", $username, $password);
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4", $username, $password);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     die("Database connection failed: " . $e->getMessage());
@@ -37,7 +37,7 @@ $stmt->execute([$currentDay, $canteenLevel]);
 $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get current date for display
-$currentDate = date('l, M d, Y');
+$currentDate = date('d/m/Y');
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -195,24 +195,23 @@ html, body {
    ======================================== */
 .main-content {
     flex: 1;
-    overflow: auto;
-    padding: 0.6rem;
+    overflow: hidden;
+    padding: 0.45rem;
 }
 
+/* 4-column category layout, Chromium 87 compatible (no CSS grid required) */
 .category-grid {
-    display: block;
-}
-
-.category-pair {
     display: flex;
-    gap: 0.6rem;
-    margin-bottom: 0.6rem;
+    flex-wrap: wrap;
+    gap: 0.45rem;
     width: 100%;
+    height: 100%;
+    align-content: flex-start;
 }
 
 .category-col {
-    flex: 1;
-    padding: 0 0.3rem;
+    width: calc(25% - 0.34rem);
+    min-width: 0;
 }
 
 .category-card {
@@ -226,34 +225,26 @@ html, body {
 .category-card-header {
     background: linear-gradient(135deg, var(--imperial-red) 0%, var(--imperial-red-dark) 100%);
     color: var(--white);
-    padding: 0.45rem 0.7rem;
+    padding: 0.35rem 0.5rem;
     border-bottom: 2px solid var(--gold);
 }
 
 .category-card-title {
-    font-size: 0.9rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-
-.menu-grid {
-    display: flex;
-}
-
-.menu-column {
-    flex: 1;
-    border-right: 1px solid var(--gold-light);
-    padding: 0.3rem 0.4rem;
-}
-
-.menu-column:last-child {
-    border-right: none;
+.menu-list {
+    padding: 0;
 }
 
 .menu-row {
-    padding: 0.25rem 0.3rem;
+    padding: 0.18rem 0.3rem;
     border-bottom: 1px solid var(--gold-light);
 }
 
@@ -262,20 +253,23 @@ html, body {
 }
 
 .menu-name {
-    font-size: 0.7rem;
+    font-size: 0.62rem;
     font-weight: 700;
     color: var(--dark-brown);
     display: block;
-    margin-bottom: 0.05rem;
+    margin-bottom: 0.02rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .menu-meta {
-    font-size: 0.58rem;
+    font-size: 0.52rem;
     color: var(--brown-light);
 }
 
 .menu-price {
-    font-size: 0.72rem;
+    font-size: 0.62rem;
     font-weight: 700;
     color: var(--imperial-red);
     float: right;
@@ -336,50 +330,28 @@ html, body {
                         $grouped[$cat][] = $item;
                     }
                     $categories = array_keys($grouped);
-                    $pairs = array_chunk($categories, 2);
                 ?>
                 <div class="category-grid">
-                    <?php foreach ($pairs as $pair): ?>
-                        <div class="category-pair">
-                            <?php foreach ($pair as $cat): 
-                                $items = $grouped[$cat];
-                                $total = count($items);
-                                $mid = ceil($total / 2);
-                                $left_items = array_slice($items, 0, $mid);
-                                $right_items = array_slice($items, $mid);
-                            ?>
-                                <div class="category-col">
-                                    <div class="category-card">
-                                        <div class="category-card-header">
-                                            <div class="category-card-title"><?php echo htmlspecialchars($cat); ?></div>
-                                        </div>
-                                        <div class="menu-grid">
-                                            <div class="menu-column menu-left">
-                                                <?php foreach ($left_items as $item): ?>
-                                                    <div class="menu-row">
-                                                        <span class="menu-name"><?php echo htmlspecialchars($item['name']); ?></span>
-                                                        <span class="menu-meta">
-                                                            <?php echo htmlspecialchars($item['unit_num'] . ' ' . $item['unit_type'] . ($item['unit_num'] > 1 ? 's' : '')); ?>
-                                                            <span class="menu-price">RM <?php echo number_format($item['price'], 2); ?></span>
-                                                        </span>
-                                                    </div>
-                                                <?php endforeach; ?>
-                                            </div>
-                                            <div class="menu-column menu-right">
-                                                <?php foreach ($right_items as $item): ?>
-                                                    <div class="menu-row">
-                                                        <span class="menu-name"><?php echo htmlspecialchars($item['name']); ?></span>
-                                                        <span class="menu-meta">
-                                                            <?php echo htmlspecialchars($item['unit_num'] . ' ' . $item['unit_type'] . ($item['unit_num'] > 1 ? 's' : '')); ?>
-                                                            <span class="menu-price">RM <?php echo number_format($item['price'], 2); ?></span>
-                                                        </span>
-                                                    </div>
-                                                <?php endforeach; ?>
-                                            </div>
-                                        </div>
-                                    </div>
+                    <?php foreach ($categories as $cat): 
+                        $catItems = $grouped[$cat];
+                    ?>
+                        <div class="category-col">
+                            <div class="category-card">
+                                <div class="category-card-header">
+                                    <div class="category-card-title"><?php echo htmlspecialchars($cat, ENT_QUOTES, 'UTF-8'); ?></div>
                                 </div>
-                            <?php endforeach; ?>
+                                <div class="menu-list">
+                                    <?php foreach ($catItems as $item): ?>
+                                        <div class="menu-row">
+                                            <span class="menu-name"><?php echo htmlspecialchars($item['name'], ENT_QUOTES, 'UTF-8'); ?></span>
+                                            <span class="menu-meta">
+                                                <?php echo htmlspecialchars($item['unit_num'] . ' ' . $item['unit_type'] . ($item['unit_num'] > 1 ? 's' : ''), ENT_QUOTES, 'UTF-8'); ?>
+                                                <span class="menu-price">RM <?php echo number_format($item['price'], 2); ?></span>
+                                            </span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -395,23 +367,22 @@ html, body {
     <script>
         function updateDateTime() {
             var now = new Date();
-            var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            
-            var dayName = days[now.getDay()];
-            var monthName = months[now.getMonth()];
             var dateNum = now.getDate();
+            var monthNum = now.getMonth() + 1;
             var year = now.getFullYear();
-            
+
+            dateNum = dateNum < 10 ? '0' + dateNum : dateNum;
+            monthNum = monthNum < 10 ? '0' + monthNum : monthNum;
+
             var hours = now.getHours();
             var minutes = now.getMinutes();
             var ampm = hours >= 12 ? 'PM' : 'AM';
             hours = hours % 12;
             hours = hours ? hours : 12;
             minutes = minutes < 10 ? '0' + minutes : minutes;
-            
+
             var timeString = hours + ':' + minutes + ' ' + ampm;
-            var dateString = dayName + ', ' + monthName + ' ' + dateNum + ', ' + year;
+            var dateString = dateNum + '/' + monthNum + '/' + year;
             
             var timeElement = document.getElementById('timeDisplay');
             var dateElement = document.getElementById('dateDisplay');
